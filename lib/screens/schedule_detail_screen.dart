@@ -19,7 +19,7 @@ class ScheduleDetailScreen extends StatefulWidget {
 
 class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
   final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  final int totalHours = 24;
+
 
   String getTask(String day, int hour) {
     final item = widget.table.items.firstWhere(
@@ -93,20 +93,43 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
   Widget build(BuildContext context) {
   final summaryMap = buildSummaryMap();    // màu nền
   final otherTasksMap = buildOtherTasksMap(); // nội dung làm mờ
+  final startHour = 4;
+  final endHour = 24;
+  final hourCount = endHour - startHour + 1;
+  
 
   return Scaffold(
-    appBar: AppBar(title: Text(widget.table.name)),
+    backgroundColor: Colors.white, // ✅ đổi màu tại đây
+    appBar: AppBar(title: Text(widget.table.name),
+    backgroundColor: Colors.white, // ✅ đổi màu tại đây
+),
     body: InteractiveViewer(
       constrained: false,
       child: DataTable(
-        columns: [
-          const DataColumn(label: Text('Hour')),
-          ...days.map((day) => DataColumn(label: Text(day))).toList(),
+        columnSpacing: 8, // hoặc 4 nếu muốn sát hơn
+        horizontalMargin: 0, // ✅ Bỏ khoảng cách 24px mặc định
+          columns: [
+            const DataColumn(
+              label: SizedBox(
+                width: 80,
+                child: Center(child: Text('Hour')),
+            ),
+          ),
+          ...days.map((day) => DataColumn(
+            label: SizedBox(
+              width: 80,
+              child: Center(child: Text(day)),
+            ),
+          )).toList(),
         ],
-        rows: List.generate(totalHours, (hourIndex) {
-          final hour = hourIndex + 1;
+        rows: List.generate(hourCount, (index) {
+          final hour = startHour + index;
           return DataRow(cells: [
-            DataCell(Text('${hour}h')),
+            DataCell(
+              Center(
+                child: Text('${hour}h'),
+              ),
+            ),
             ...days.map((day) {
               final task = getTask(day, hour);
               final bgColor = summaryMap[day]![hour]; // màu tổng hợp
@@ -114,13 +137,17 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
 
               return DataCell(
                 GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () async {
                     final controller = TextEditingController(text: task);
                     final newTask = await showDialog<String>(
                       context: context,
                       builder: (_) => AlertDialog(
                         title: Text('Nhập công việc ($day - ${hour}h)'),
-                        content: TextField(controller: controller),
+                        content: TextField(
+                          controller: controller,
+                          autofocus: true,
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, controller.text),
@@ -134,24 +161,27 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
                       setState(() {});
                     }
                   },
-                  child: Container(
-                    width: 80,
-                    height: 50,
-                    alignment: Alignment.center,
-                    color: bgColor,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(task.isEmpty ? '-' : task),
-                        if (otherTaskText.isNotEmpty)
-                          Text(
-                            otherTaskText,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.black.withOpacity(0.3),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Container(
+                      width: 80,
+                      height: 40,
+                      alignment: Alignment.center,
+                      color: bgColor,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(task.isEmpty ? '-' : task),
+                          if (otherTaskText.isNotEmpty)
+                            Text(
+                              otherTaskText,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.black.withOpacity(0.3),
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),

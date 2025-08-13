@@ -9,6 +9,9 @@ class SummaryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final Map<String, Map<int, List<_TaskWithColor>>> summary = {};
+    final startHour = 4;
+    final endHour = 24;
+    final hourCount = endHour - startHour + 1;
 
     for (var day in days) {
       summary[day] = {};
@@ -26,40 +29,59 @@ class SummaryScreen extends StatelessWidget {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Bảng tổng'),
+        backgroundColor: Colors.white, // ✅ đổi màu tại đây
+      ),
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('Bảng tổng')),
       body: InteractiveViewer(
         constrained: false,
         child: DataTable(
+          columnSpacing: 8, // hoặc 4 nếu muốn sát hơn
+          horizontalMargin: 0, // ✅ Bỏ khoảng cách 24px mặc định
           columns: [
-            const DataColumn(label: Text('Hour')),
-            ...days.map((day) => DataColumn(label: Text(day))).toList(),
-          ],
-          rows: List.generate(24, (hourIndex) {
-            final hour = hourIndex + 1;
+            const DataColumn(
+              label: SizedBox(
+                width: 80,
+                child: Center(child: Text('Hour')),
+            ),
+          ),
+          ...days.map((day) => DataColumn(
+            label: SizedBox(
+              width: 80,
+              child: Center(child: Text(day)),
+            ),
+          )).toList(),
+        ],
+          rows: List.generate(hourCount, (Index) {
+            final hour = startHour + Index;
             return DataRow(cells: [
-              DataCell(Text('${hour}h')),
+            DataCell(
+              Center(
+                child: Text('${hour}h'),
+              ),
+            ),
               ...days.map((day) {
                 final taskList = summary[day]![hour]!;
-
-                // Lấy màu nền theo bảng đầu tiên nếu có task, nếu có nhiều bảng thì dùng màu xám
-                Color? bgColor;
-                if (taskList.isEmpty) {
-                  bgColor = null;
-                } else if (taskList.length == 1) {
-                  bgColor = taskList.first.color.withOpacity(0.4);
-                } else {
-                  // Nhiều bảng cùng giờ -> tô màu xám nhạt
-                  bgColor = Colors.grey.withOpacity(0.3);
-                }
 
                 return DataCell(
                   Container(
                     width: 80, // Cố định rộng ô cho đẹp
-                    height: 50, // Cố định cao ô
-                    color: bgColor,
+                    height: 40, // Cố định cao ô
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: taskList.isEmpty
+                            ? Colors.transparent // không có viền nếu trống
+                            : (taskList.length == 1
+                                ? taskList.first.color // màu bảng nếu chỉ 1 bảng
+                                : Colors.grey), // màu xám nếu nhiều bảng
+                        width: 1, // độ dày viền
+                      ),
+                      borderRadius: BorderRadius.circular(10), // bo góc cho đẹp
+                    ),
                     padding: const EdgeInsets.all(4),
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.center,
                     child: Text(
                       taskList.isEmpty
                         ? '-'
