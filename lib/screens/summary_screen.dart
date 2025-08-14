@@ -10,7 +10,7 @@ class SummaryScreen extends StatelessWidget {
     final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final Map<String, Map<int, List<_TaskWithColor>>> summary = {};
     final startHour = 4;
-    final endHour = 24;
+    final endHour = 23;
     final hourCount = endHour - startHour + 1;
 
     for (var day in days) {
@@ -31,28 +31,29 @@ class SummaryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Bảng tổng'),
-        backgroundColor: Colors.white, // ✅ đổi màu tại đây
+        backgroundColor: Colors.white,
       ),
       backgroundColor: Colors.white,
       body: InteractiveViewer(
         constrained: false,
+        
         child: DataTable(
           columnSpacing: 8, // hoặc 4 nếu muốn sát hơn
-          horizontalMargin: 0, // ✅ Bỏ khoảng cách 24px mặc định
+          horizontalMargin: 0, // Bỏ khoảng cách 24px mặc định
           columns: [
             const DataColumn(
               label: SizedBox(
                 width: 80,
                 child: Center(child: Text('Hour')),
+              ),
             ),
-          ),
-          ...days.map((day) => DataColumn(
-            label: SizedBox(
-              width: 80,
-              child: Center(child: Text(day)),
-            ),
-          )).toList(),
-        ],
+            ...days.map((day) => DataColumn(
+              label: SizedBox(
+                width: 80,
+                child: Center(child: Text(day)),
+              ),
+            )).toList(),
+          ],
           rows: List.generate(hourCount, (Index) {
             final hour = startHour + Index;
             return DataRow(cells: [

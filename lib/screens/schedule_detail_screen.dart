@@ -94,15 +94,17 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
   final summaryMap = buildSummaryMap();    // màu nền
   final otherTasksMap = buildOtherTasksMap(); // nội dung làm mờ
   final startHour = 4;
-  final endHour = 24;
+  final endHour = 23;
   final hourCount = endHour - startHour + 1;
   
 
   return Scaffold(
     backgroundColor: Colors.white, // ✅ đổi màu tại đây
-    appBar: AppBar(title: Text(widget.table.name),
-    backgroundColor: Colors.white, // ✅ đổi màu tại đây
-),
+    appBar: AppBar(
+      title: Text(widget.table.name),
+      backgroundColor: Colors.white, // ✅ đổi màu tại đây
+    ),
+    
     body: InteractiveViewer(
       constrained: false,
       child: DataTable(

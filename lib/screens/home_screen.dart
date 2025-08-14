@@ -1,10 +1,12 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart'; // cần thêm package
+import '../models/schedule.dart';
+import 'summary_screen.dart';
+import 'schedule_detail_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/schedule.dart';
-import 'schedule_detail_screen.dart';
-import 'summary_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<ScheduleTable> tables = [];
   final TextEditingController nameController = TextEditingController();
 
+  
   // Danh sách màu có thể dùng (bạn thêm bớt tùy thích)
   final List<Color> availableColors = [
     Colors.red,
@@ -171,17 +174,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[100],
 
       appBar: AppBar(
+        title: Text(
+          'Quản lý lịch làm việc',
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.white,
-        title: const Text('Quản lý lịch làm việc'),
+        elevation: 1,
         actions: [
           IconButton(
-            icon: const Icon(Icons.table_chart),
+            icon: const Icon(Icons.table_chart, color: Colors.blue),
             onPressed: () {
               Navigator.push(
                 context,
@@ -193,82 +201,131 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         ],
       ),
-      body: Column(
-        children: [
-          
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'Nhập tên bảng...',
-                    ),
+
+      body: Padding(
+        padding: const EdgeInsets.all(12),
+        child: tables.isEmpty
+            ? Center(
+                child: Text(
+                  'Chưa có bảng nào.\nNhấn nút + để tạo mới',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.roboto(
+                    fontSize: 16,
+                    color: Colors.grey[600],
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: addTable,
-                  child: const Text('Tạo'),
-                )
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: tables.length,
-              itemBuilder: (context, index) {
-                final table = tables[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: table.color,
-                  ),
-                  title: Text(
-                    table.name,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: table.color,
+              )
+            : ListView.separated(
+                itemCount: tables.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final table = tables[index];
+                  return Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ScheduleDetailScreen(
-                          table: table,
-                          onUpdate: (updated) {
-                            setState(() {
-                              tables[index] = updated;
-                              saveTables();
-                            });
-                          },
-                        allTables: tables, // <-- thêm dòng này
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: table.color,
+                        child: const Icon(Icons.table_rows, color: Colors.white),
+                      ),
+                      title: Text(
+                        table.name,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
                         ),
                       ),
-                    );
-                  },
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        tooltip: 'Sửa tên',
-                        onPressed: () => editTableName(index),
+                      subtitle: Text(
+                        'Nhấn để xem chi tiết',
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        tooltip: 'Xóa bảng',
-                        onPressed: () => deleteTable(index),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            editTableName(index);
+                          } else if (value == 'delete') {
+                            deleteTable(index);
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Text('Sửa tên'),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Xóa'),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          )
-        ],
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ScheduleDetailScreen(
+                              table: table,
+                              onUpdate: (updated) {
+                                setState(() {
+                                  tables[index] = updated;
+                                });
+                              },
+                              allTables: tables,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
       ),
+
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _showAddTableDialog();
+        },
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _showAddTableDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Tạo bảng mới', style: GoogleFonts.montserrat(fontSize: 18)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  hintText: 'Nhập tên bảng...',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  addTable();
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('Tạo'),
+              )
+            ],
+          ),
+        );
+      },
     );
   }
 }
