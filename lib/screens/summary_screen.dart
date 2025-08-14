@@ -86,8 +86,8 @@ class SummaryScreen extends StatelessWidget {
                     child: Text(
                       taskList.isEmpty
                         ? '-'
-                        : taskList.map((t) => t.task).toSet().join('\n'), // ✅ Loại trùng
-                      style: const TextStyle(fontSize: 12),
+                        : taskList.map((t) => t.task).toSet().join('\n'), // Loại trùng
+                      style: const TextStyle(fontSize: 9),
                     ),
                   ),
                 );

@@ -178,7 +178,7 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
                             Text(
                               otherTaskText,
                               style: TextStyle(
-                                fontSize: 10,
+                                fontSize: 6,
                                 color: Colors.black.withOpacity(0.3),
                               ),
                             ),
