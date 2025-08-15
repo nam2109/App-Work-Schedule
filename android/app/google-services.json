@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "569363973691",
+    "project_id": "apptkb-306c7",
+    "storage_bucket": "apptkb-306c7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:569363973691:android:8126ab8078cad2b690be1e",
+        "android_client_info": {
+          "package_name": "com.example.work_schedule_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0WpOO0u9zJD0-w1BPEHjwEAscErysdzs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

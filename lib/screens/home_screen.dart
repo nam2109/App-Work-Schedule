@@ -6,6 +6,8 @@ import 'schedule_detail_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:math';
+import '../services/firestore_service.dart';
+
 
 
 class HomeScreen extends StatefulWidget {
@@ -34,11 +36,17 @@ class _HomeScreenState extends State<HomeScreen> {
     Colors.cyan,
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    loadTables();
-  }
+@override
+void initState() {
+  super.initState();
+  FirestoreService().streamSchedules().listen((remoteTables) {
+    setState(() {
+      tables = remoteTables;
+    });
+    saveTables(); // update local
+  });
+}
+
 
   Future<void> loadTables() async {
     final prefs = await SharedPreferences.getInstance();
@@ -188,6 +196,29 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.white,
         elevation: 1,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.cloud_upload, color: Colors.green),
+            onPressed: () async {
+              await FirestoreService().saveSchedules(tables);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Đã lưu lên Firebase')),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.cloud_download, color: Colors.blue),
+            onPressed: () async {
+              final newTables = await FirestoreService().loadSchedules();
+              setState(() {
+                tables = newTables;
+              });
+              saveTables(); // Lưu local để đồng bộ
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Đã tải từ Firebase')),
+              );
+            },
+          ),
+
           IconButton(
             icon: const Icon(Icons.table_chart, color: Colors.blue),
             onPressed: () {
