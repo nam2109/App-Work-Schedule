@@ -99,98 +99,103 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
   
 
   return Scaffold(
-    backgroundColor: Colors.white, // ✅ đổi màu tại đây
+    backgroundColor: Colors.white, // đổi màu tại đây
     appBar: AppBar(
       title: Text(widget.table.name),
-      backgroundColor: Colors.white, // ✅ đổi màu tại đây
+      backgroundColor: Colors.white, // đổi màu tại đây
     ),
     
     body: InteractiveViewer(
       constrained: false,
-      child: DataTable(
-        columnSpacing: 8, // hoặc 4 nếu muốn sát hơn
-        horizontalMargin: 0, // ✅ Bỏ khoảng cách 24px mặc định
-          columns: [
-            const DataColumn(
-              label: SizedBox(
-                width: 80,
-                child: Center(child: Text('Hour')),
-            ),
-          ),
-          ...days.map((day) => DataColumn(
-            label: SizedBox(
-              width: 80,
-              child: Center(child: Text(day)),
-            ),
-          )).toList(),
-        ],
-        rows: List.generate(hourCount, (index) {
-          final hour = startHour + index;
-          return DataRow(cells: [
-            DataCell(
-              Center(
-                child: Text('${hour}h'),
+      minScale: 0.01, // Zoom out gần như vô hạn
+      maxScale: 3.0, // Zoom in nhiều
+      child: SizedBox(
+        width: days.length * 80 + 100, // Chiều rộng dựa trên số cột
+        height: (hourCount + 1) * 60 + 100, // Chiều cao dựa trên số hàng
+        child: DataTable(
+          columnSpacing: 8, // hoặc 4 nếu muốn sát hơn
+          horizontalMargin: 0, // Bỏ khoảng cách 24px mặc định
+            columns: [
+              const DataColumn(
+                label: SizedBox(
+                  width: 30,
               ),
             ),
-            ...days.map((day) {
-              final task = getTask(day, hour);
-              final bgColor = summaryMap[day]![hour]; // màu tổng hợp
-              final otherTaskText = otherTasksMap[day]![hour] ?? ''; // ✅ Thêm dòng này
-
-              return DataCell(
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () async {
-                    final controller = TextEditingController(text: task);
-                    final newTask = await showDialog<String>(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: Text('Nhập công việc ($day - ${hour}h)'),
-                        content: TextField(
-                          controller: controller,
-                          autofocus: true,
+            ...days.map((day) => DataColumn(
+              label: SizedBox(
+                width: 80,
+                child: Center(child: Text(day)),
+              ),
+            )).toList(),
+          ],
+          rows: List.generate(hourCount, (index) {
+            final hour = startHour + index;
+            return DataRow(cells: [
+              DataCell(
+                Center(
+                  child: Text('${hour}h'),
+                ),
+              ),
+              ...days.map((day) {
+                final task = getTask(day, hour);
+                final bgColor = summaryMap[day]![hour]; // màu tổng hợp
+                final otherTaskText = otherTasksMap[day]![hour] ?? '';
+        
+                return DataCell(
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () async {
+                      final controller = TextEditingController(text: task);
+                      final newTask = await showDialog<String>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: Text('Nhập công việc ($day - ${hour}h)'),
+                          content: TextField(
+                            controller: controller,
+                            autofocus: true,
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, controller.text),
+                              child: const Text('OK'),
+                            )
+                          ],
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, controller.text),
-                            child: const Text('OK'),
-                          )
-                        ],
-                      ),
-                    );
-                    if (newTask != null) {
-                      setTask(day, hour, newTask);
-                      setState(() {});
-                    }
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      width: 80,
-                      height: 40,
-                      alignment: Alignment.center,
-                      color: bgColor,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(task.isEmpty ? '-' : task),
-                          if (otherTaskText.isNotEmpty)
-                            Text(
-                              otherTaskText,
-                              style: TextStyle(
-                                fontSize: 6,
-                                color: Colors.black.withOpacity(0.3),
+                      );
+                      if (newTask != null) {
+                        setTask(day, hour, newTask);
+                        setState(() {});
+                      }
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        width: 80,
+                        height: 40,
+                        alignment: Alignment.center,
+                        color: bgColor,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center, 
+                          children: [
+                            Text(task.isEmpty ? '-' : task),
+                            if (otherTaskText.isNotEmpty)
+                              Text(
+                                otherTaskText,
+                                style: TextStyle(
+                                  fontSize: 6,
+                                  color: Colors.black.withOpacity(0.3),
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
-          ]);
-        }),
+                );
+              }).toList(),
+            ]);
+          }),
+        ),
       ),
     ),
   );

@@ -36,64 +36,68 @@ class SummaryScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: InteractiveViewer(
         constrained: false,
-        
-        child: DataTable(
-          columnSpacing: 8, // hoặc 4 nếu muốn sát hơn
-          horizontalMargin: 0, // Bỏ khoảng cách 24px mặc định
-          columns: [
-            const DataColumn(
-              label: SizedBox(
-                width: 80,
-                child: Center(child: Text('Hour')),
+        minScale: 0.01, // Zoom out gần như vô hạn
+        maxScale: 3.0, // Zoom in nhiều
+        child: SizedBox(
+          width: days.length * 80 + 100, // Chiều rộng dựa trên số cột
+          height: (hourCount + 1) * 60 + 100, // Chiều cao dựa trên số hàng
+          child: DataTable(
+            columnSpacing: 4, // hoặc 4 nếu muốn sát hơn
+            horizontalMargin: 0, // Bỏ khoảng cách 24px mặc định
+            columns: [
+              const DataColumn(
+                label: SizedBox(
+                  width: 30, // Cố định rộng ô cho đẹp
+                ),
               ),
-            ),
-            ...days.map((day) => DataColumn(
-              label: SizedBox(
-                width: 80,
-                child: Center(child: Text(day)),
+              ...days.map((day) => DataColumn(
+                label: SizedBox(
+                  width: 80,
+                  child: Center(child: Text(day)),
+                ),
+              )).toList(),
+            ],
+            rows: List.generate(hourCount, (Index) {
+              final hour = startHour + Index;
+              return DataRow(cells: [
+              DataCell(
+                Center(
+                  child: Text('${hour}h'),
+                ),
               ),
-            )).toList(),
-          ],
-          rows: List.generate(hourCount, (Index) {
-            final hour = startHour + Index;
-            return DataRow(cells: [
-            DataCell(
-              Center(
-                child: Text('${hour}h'),
-              ),
-            ),
-              ...days.map((day) {
-                final taskList = summary[day]![hour]!;
-
-                return DataCell(
-                  Container(
-                    width: 80, // Cố định rộng ô cho đẹp
-                    height: 40, // Cố định cao ô
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: taskList.isEmpty
-                            ? Colors.transparent // không có viền nếu trống
-                            : (taskList.length == 1
-                                ? taskList.first.color // màu bảng nếu chỉ 1 bảng
-                                : Colors.grey), // màu xám nếu nhiều bảng
-                        width: 1, // độ dày viền
+                ...days.map((day) {
+                  final taskList = summary[day]![hour]!;
+          
+                  return DataCell(
+                    Container(
+                      width: 85, // Cố định rộng ô cho đẹp
+                      height: 40, // Cố định cao ô
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(
+                          color: taskList.isEmpty
+                              ? Colors.transparent // không có viền nếu trống
+                              : (taskList.length == 1
+                                  ? taskList.first.color // màu bảng nếu chỉ 1 bảng
+                                  : Colors.grey), // màu xám nếu nhiều bảng
+                          width: 1, // độ dày viền
+                        ),
+                        borderRadius: BorderRadius.circular(10), // bo góc cho đẹp
                       ),
-                      borderRadius: BorderRadius.circular(10), // bo góc cho đẹp
+                      padding: const EdgeInsets.all(4),
+                      alignment: Alignment.center,
+                      child: Text(
+                        taskList.isEmpty
+                          ? '-'
+                          : taskList.map((t) => t.task).toSet().join('\n'), // ✅ Loại trùng
+                        style: const TextStyle(fontSize: 9),
+                      ),
                     ),
-                    padding: const EdgeInsets.all(4),
-                    alignment: Alignment.center,
-                    child: Text(
-                      taskList.isEmpty
-                        ? '-'
-                        : taskList.map((t) => t.task).toSet().join('\n'), // Loại trùng
-                      style: const TextStyle(fontSize: 9),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ]);
-          }),
+                  );
+                }).toList(),
+              ]);
+            }),
+          ),
         ),
       ),
     );
