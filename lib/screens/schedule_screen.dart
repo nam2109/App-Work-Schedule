@@ -190,7 +190,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         backgroundColor: Colors.grey[100],
         appBar: AppBar(
           title: Text(
-            'Danh mục: ${widget.category.name}',
+            '${widget.category.name}',
             style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
           ),
           backgroundColor: Colors.white,

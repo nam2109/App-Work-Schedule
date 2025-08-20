@@ -152,7 +152,7 @@ void _duplicateCategory(int index) {
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: Text(
-          'Danh mục lịch làm việc',
+          'Danh mục',
           style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
