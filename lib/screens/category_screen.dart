@@ -33,8 +33,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
     final raw = prefs.getString('categories');
     if (raw != null) {
       final list = (jsonDecode(raw) as List<dynamic>)
-          .map((e) => Category.fromJson(e as Map<String, dynamic>))
-          .toList();
+      .map((e) => Category.fromJson(e as Map<String, dynamic>))
+      .toList();
       setState(() => categories = list);
     }
   }
@@ -185,58 +185,53 @@ void _duplicateCategory(int index) {
         ],
       ),
       body: categories.isEmpty
-          ? Center(
-              child: Text(
-                'Chưa có danh mục.\nNhấn nút + để tạo mới',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
+      ? Center(
+        child: Text(
+          'Chưa có danh mục.\nNhấn nút + để tạo mới',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
+        ),
+      )
+      : ListView.separated(
+        padding: const EdgeInsets.all(12),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          return Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.folder)),
+              title: Text(
+                cat.name,
+                style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(12),
-              itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final cat = categories[index];
-                return Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.folder)),
-                    title: Text(
-                      cat.name,
-                      style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text('${cat.tables.length} bảng thời khóa biểu'),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'edit') _editCategory(index);
-                        if (value == 'delete') _deleteCategory(index);
-                        if (value == 'duplicate') _duplicateCategory(index);
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'edit', child: Text('Sửa tên')),
-                        PopupMenuItem(value: 'delete', child: Text('Xóa')),
-                        PopupMenuItem(value: 'duplicate', child: Text('Sao chép')),
-                      ],
-                    ),
-                    onTap: () async {
-                      // Đi tới màn hình quản lý bảng thuộc danh mục
-                      final updated = await Navigator.push<Category>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ScheduleScreen(category: cat),
-                        ),
-                      );
-                      if (updated != null) {
-                        setState(() => categories[index] = updated);
-                        _saveLocal();
-                      }
-                    },
+              subtitle: Text('${cat.tables.length} bảng thời khóa biểu'),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') _editCategory(index);
+                  if (value == 'delete') _deleteCategory(index);
+                  if (value == 'duplicate') _duplicateCategory(index);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Sửa tên')),
+                  PopupMenuItem(value: 'delete', child: Text('Xóa')),
+                  PopupMenuItem(value: 'duplicate', child: Text('Sao chép')),
+                ],
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ScheduleScreen(category: categories[index]),
                   ),
-                );
+                ).then((_) => _saveLocal()); // lưu lại khi quay về
               },
             ),
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCategoryDialog,
         backgroundColor: Colors.blue,

@@ -38,6 +38,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     super.initState();
     tables = List<ScheduleTable>.from(widget.category.tables);
     _loadLocalForCategory();
+    // _loadFromFirebase();
   }
 
   String get _localKey => 'tables_${widget.category.id}';
@@ -54,6 +55,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       });
     }
   }
+
+  // Future<void> _loadFromFirebase() async {
+  //   final cat = await FirestoreService().loadCategory(widget.category.id);
+  //   if (cat != null) {
+  //     setState(() => tables = cat.tables);
+  //     await _saveLocalForCategory(); // Lưu lại để lần sau vào nhanh
+  //   }
+  // }
 
   Future<void> _saveLocalForCategory() async {
     final prefs = await SharedPreferences.getInstance();
@@ -89,8 +98,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       Colors.cyan,
       Colors.indigo,
     ];
-    final candidates =
-        allColors.where((c) => !usedValues.contains(c.value)).toList();
+
+    final candidates = allColors.where((c) => !usedValues.contains(c.value)).toList();
     candidates.shuffle();
 
     setState(() {
@@ -102,7 +111,6 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
       );
     });
-
     nameController.clear();
     _saveLocalForCategory();
   }
@@ -192,114 +200,114 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: _finishAndReturn,
           ),
-actions: [
-  IconButton(
-    icon: const Icon(Icons.cloud_upload, color: Colors.green),
-    onPressed: () async {
-      await FirestoreService().saveCategory(
-        Category(
-          id: widget.category.id,
-          name: widget.category.name,
-          tables: tables,
-        ),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã lưu danh mục này lên Firebase')),
-        );
-      }
-    },
-  ),
-  IconButton(
-    icon: const Icon(Icons.cloud_download, color: Colors.blue),
-    onPressed: () async {
-      final cat = await FirestoreService().loadCategory(widget.category.id);
-      if (cat != null) {
-        setState(() => tables = cat.tables);
-        await _saveLocalForCategory();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Đã tải danh mục từ Firebase')),
-          );
-        }
-      }
-    },
-  ),
-  IconButton(
-    icon: const Icon(Icons.table_chart, color: Colors.blue),
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SummaryScreen(tables: tables),
-        ),
-      );
-    },
-  ),
-],
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.cloud_upload, color: Colors.green),
+              onPressed: () async {
+                await FirestoreService().saveCategory(
+                  Category(
+                    id: widget.category.id,
+                    name: widget.category.name,
+                    tables: tables,
+                  ),
+                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Đã lưu danh mục này lên Firebase')),
+                  );
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.cloud_download, color: Colors.blue),
+              onPressed: () async {
+                final cat = await FirestoreService().loadCategory(widget.category.id);
+                if (cat != null) {
+                  setState(() => tables = cat.tables);
+                  await _saveLocalForCategory();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã tải danh mục từ Firebase')),
+                    );
+                  }
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.table_chart, color: Colors.blue),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SummaryScreen(tables: tables),
+                  ),
+                );
+              },
+            ),
+          ],
         ),
         body: Padding(
           padding: const EdgeInsets.all(12),
           child: tables.isEmpty
-              ? Center(
-                  child: Text(
-                    'Chưa có bảng nào.\nNhấn nút + để tạo mới',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
+          ? Center(
+            child: Text(
+              'Chưa có bảng nào.\nNhấn nút + để tạo mới',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
+            ),
+          )
+          : ListView.separated(
+            itemCount: tables.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final table = tables[index];
+              return Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: table.color,
+                    child: const Icon(Icons.table_rows, color: Colors.white),
                   ),
-                )
-              : ListView.separated(
-                  itemCount: tables.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final table = tables[index];
-                    return Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: table.color,
-                          child: const Icon(Icons.table_rows, color: Colors.white),
+                  title: Text(
+                    table.name,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  subtitle: Text('Nhấn để xem chi tiết', style: TextStyle(color: Colors.grey[600])),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') editTableName(index);
+                      if (value == 'delete') deleteTable(index);
+                    },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'edit', child: Text('Sửa tên')),
+                      PopupMenuItem(value: 'delete', child: Text('Xóa')),
+                    ],
+                  ),
+                  onTap: () async {
+                    final updated = await Navigator.push<ScheduleTable>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ScheduleDetailScreen(
+                          table: table,
+                          onUpdate: (u) {}, // không dùng vì trả về kết quả
+                          allTables: tables,
                         ),
-                        title: Text(
-                          table.name,
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        subtitle: Text('Nhấn để xem chi tiết', style: TextStyle(color: Colors.grey[600])),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) {
-                            if (value == 'edit') editTableName(index);
-                            if (value == 'delete') deleteTable(index);
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'edit', child: Text('Sửa tên')),
-                            PopupMenuItem(value: 'delete', child: Text('Xóa')),
-                          ],
-                        ),
-                        onTap: () async {
-                          final updated = await Navigator.push<ScheduleTable>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ScheduleDetailScreen(
-                                table: table,
-                                onUpdate: (u) {}, // không dùng vì trả về kết quả
-                                allTables: tables,
-                              ),
-                            ),
-                          );
-                          if (updated != null) {
-                            setState(() => tables[index] = updated);
-                            _saveLocalForCategory();
-                          }
-                        },
                       ),
                     );
+                    if (updated != null) {
+                      setState(() => tables[index] = updated);
+                      _saveLocalForCategory();
+                    }
                   },
                 ),
+              );
+            },
+          ),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: _showAddTableDialog,
