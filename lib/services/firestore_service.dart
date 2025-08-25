@@ -51,16 +51,16 @@ class FirestoreService {
   }
 
   Future<void> saveCategory(Category category) async {
-  final docRef = _db.collection('categories').doc(category.id);
-  await docRef.set(category.toJson());
-}
-
-Future<Category?> loadCategory(String id) async {
-  final docRef = _db.collection('categories').doc(id);
-  final snapshot = await docRef.get();
-  if (snapshot.exists) {
-    return Category.fromJson(snapshot.data()!);
+    final docRef = _db.collection('categories').doc(category.id);
+    await docRef.set(category.toJson());
   }
-  return null;
-}
+
+  Future<Category?> loadCategory(String id) async {
+    final doc = await _db.collection('categories').doc(id).get();
+    if (doc.exists && doc.data() != null) {
+      return Category.fromJson(doc.data()!);
+    }
+    return null;
+  }
+
 }

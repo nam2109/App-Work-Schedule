@@ -59,6 +59,7 @@ class CategoryNotifier extends StateNotifier<List<Category>> {
       id: newId,
       name: '${original.name} (Copy)',
       tables: original.tables.map((t) => t.copyWith()).toList(),
+      updatedAt: DateTime.now(),
     );
     state = [...state, copy];
     _saveLocal();

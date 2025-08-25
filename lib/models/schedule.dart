@@ -4,23 +4,27 @@ class Category {
   String id;
   String name;
   List<ScheduleTable> tables;
+  DateTime updatedAt;
 
   Category({
     required this.id,
     required this.name,
     required this.tables,
+    required this.updatedAt,
   });
 
   factory Category.empty(String id, String name) => Category(
         id: id,
         name: name,
         tables: [],
+        updatedAt: DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
         'tables': tables.map((t) => t.toJson()).toList(),
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   factory Category.fromJson(Map<String, dynamic> json) => Category(
@@ -29,27 +33,20 @@ class Category {
         tables: (json['tables'] as List<dynamic>? ?? const [])
             .map((e) => ScheduleTable.fromJson(e as Map<String, dynamic>))
             .toList(),
+        updatedAt: DateTime.tryParse(json['updatedAt'] ?? '') ?? DateTime.now(),
       );
 
-  /// deep copy (clone) — tạo id mới, thêm (Copy) vào tên
-  Category clone() {
-    return Category(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      name: '$name (Copy)',
-      tables: tables.map((t) => t.clone()).toList(),
-    );
-  }
-
-  /// copyWith để tiện chỉnh/nhân bản có kiểm soát
   Category copyWith({
     String? id,
     String? name,
     List<ScheduleTable>? tables,
+    DateTime? updatedAt,
   }) {
     return Category(
       id: id ?? this.id,
       name: name ?? this.name,
       tables: tables ?? this.tables.map((t) => t.clone()).toList(),
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

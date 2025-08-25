@@ -91,24 +91,29 @@ class ScheduleScreen extends ConsumerWidget {
           elevation: 1,
           leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: _finishAndReturn),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.cloud_upload, color: Colors.green),
-              onPressed: () async {
-                await notifier.uploadToFirebase();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã lưu danh mục này lên Firebase')),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.cloud_download, color: Colors.blue),
-              onPressed: () async {
-                await notifier.downloadFromFirebase();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã tải danh mục từ Firebase')),
-                );
-              },
-            ),
+            Consumer(builder: (context, ref, _) {
+              final loading = ref.watch(syncLoadingProvider);
+              return loading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.sync, color: Colors.blue),
+                      onPressed: () async {
+                        ref.read(syncLoadingProvider.notifier).state = true;
+                        final message = await notifier.syncWithFirebase();
+                        ref.read(syncLoadingProvider.notifier).state = false;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(message)),
+                        );
+                      },
+                    );
+            }),
             IconButton(
               icon: const Icon(Icons.table_chart, color: Colors.blue),
               onPressed: () {
