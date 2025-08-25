@@ -144,7 +144,14 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
                 return DataCell(
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () async {
+                    // 1) Tap: set ngay tên bảng hiện tại cho ô
+                    onTap: () {
+                      final isSame = task == widget.table.name;
+                      setTask(day, hour, isSame ? '' : widget.table.name);
+                      setState(() {});
+                    },
+                    onLongPress: () async {
+                      // Cho phép nhập thủ công
                       final controller = TextEditingController(text: task);
                       final newTask = await showDialog<String>(
                         context: context,
