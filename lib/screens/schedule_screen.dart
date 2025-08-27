@@ -48,50 +48,119 @@ Color getRandomColor() {
   );
 }
 
-    void _showAddTableDialog() {
-      showModalBottomSheet(
-        context: context,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (_) => Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Tạo bảng mới', style: GoogleFonts.montserrat(fontSize: 18)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  hintText: 'Nhập tên bảng...',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final name = nameController.text.trim();
-                  if (name.isEmpty) return;
+  void _showAddTableDialog() {
+    final previewColor = getRandomColor();
 
-                  final table = ScheduleTable(
-                    name: name,
-                    items: [],
-                    colorValue: getRandomColor().value,
-                  );
-
-                  notifier.addTable(table);
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.check),
-                label: const Text('Tạo'),
-              )
-            ],
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) {
+        return AnimatedPadding(
+          duration: const Duration(milliseconds: 300),
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
           ),
-        ),
-      );
-    }
-    void _editTableName(BuildContext context, int index, String oldName) async {
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header với nút đóng
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Tạo bảng mới',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Preview màu
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: previewColor,
+                      radius: 18,
+                      child: const Icon(Icons.table_rows, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Màu của bảng',
+                      style: GoogleFonts.roboto(fontSize: 16),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Ô nhập tên
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    hintText: 'Nhập tên bảng...',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.edit_note),
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 24),
+
+                // Nút tạo
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final name = nameController.text.trim();
+                      if (name.isEmpty) return;
+
+                      final table = ScheduleTable(
+                        name: name,
+                        items: [],
+                        colorValue: previewColor.value,
+                      );
+
+                      notifier.addTable(table);
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    icon: const Icon(Icons.check),
+                    label: const Text(
+                      'Tạo bảng',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+  void _editTableName(BuildContext context, int index, String oldName) async {
   final controller = TextEditingController(text: oldName);
   final newName = await showDialog<String>(
     context: context,
