@@ -91,6 +91,83 @@ Color getRandomColor() {
         ),
       );
     }
+    void _editTableName(BuildContext context, int index, String oldName) async {
+  final controller = TextEditingController(text: oldName);
+  final newName = await showDialog<String>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Chỉnh sửa tên bảng'),
+      content: TextField(controller: controller),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+        ElevatedButton(
+          onPressed: () {
+            final txt = controller.text.trim();
+            if (txt.isNotEmpty) Navigator.pop(context, txt);
+          },
+          child: const Text('Lưu'),
+        ),
+      ],
+    ),
+  );
+  if (newName != null && newName.isNotEmpty) {
+    notifier.editTableName(index, newName);
+  }
+}
+
+void _confirmDelete(BuildContext context, int index) async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Xác nhận xóa'),
+      content: const Text('Bạn có chắc muốn xóa bảng này không?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Xóa'),
+        ),
+      ],
+    ),
+  );
+  if (confirm == true) {
+    notifier.deleteTable(index);
+  }
+}
+
+
+void _showTableOptions(BuildContext context, ScheduleTable table, int index) {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.edit, color: Colors.blue),
+            title: const Text('Sửa tên'),
+            onTap: () {
+              Navigator.pop(context);
+              _editTableName(context, index, table.name);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete, color: Colors.red),
+            title: const Text('Xóa', style: TextStyle(color: Colors.red)),
+            onTap: () {
+              Navigator.pop(context);
+              _confirmDelete(context, index);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
     void _finishAndReturn() {
       final updatedCategory = category.copyWith(tables: tables);
@@ -172,40 +249,6 @@ Color getRandomColor() {
                           style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
                         ),
                         subtitle: Text('Nhấn để xem chi tiết', style: TextStyle(color: Colors.grey[600])),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (value) async {
-                            if (value == 'edit') {
-                              final controller = TextEditingController(text: table.name);
-                              final newName = await showDialog<String>(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text('Chỉnh sửa tên bảng'),
-                                  content: TextField(controller: controller),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        final txt = controller.text.trim();
-                                        if (txt.isNotEmpty) Navigator.pop(context, txt);
-                                      },
-                                      child: const Text('Lưu'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (newName != null && newName.isNotEmpty) {
-                                notifier.editTableName(index, newName);
-                              }
-                            }
-                            if (value == 'delete') {
-                              notifier.deleteTable(index);
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'edit', child: Text('Sửa tên')),
-                            PopupMenuItem(value: 'delete', child: Text('Xóa')),
-                          ],
-                        ),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -218,6 +261,8 @@ Color getRandomColor() {
                             ),
                           );
                         },
+                          onLongPress: () => _showTableOptions(context, table, index),
+
                       ),
                     );
                   },

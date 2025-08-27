@@ -98,6 +98,8 @@ Future<String> syncWithFirebase() async {
   }
 }
 
+  void changeTableColor(int index, int value) {}
+
 }
 
 // Provider cho từng category
