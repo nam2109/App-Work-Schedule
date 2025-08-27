@@ -19,63 +19,43 @@ class CategoryScreen extends ConsumerWidget {
         title: Text('Danh mục', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 1,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.cloud_upload, color: Colors.green),
-            onPressed: () async {
-              await notifier.uploadToFirebase();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã lưu danh mục lên Firebase')),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.cloud_download, color: Colors.blue),
-            onPressed: () async {
-              await notifier.downloadFromFirebase();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đã tải danh mục từ Firebase')),
-              );
-            },
-          ),
-        ],
       ),
       body: categories.isEmpty
-          ? Center(
-              child: Text(
-                'Chưa có danh mục.\nNhấn nút + để tạo mới',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
+        ? Center(
+          child: Text(
+            'Chưa có danh mục.\nNhấn nút + để tạo mới',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
+        ),
+      )
+      : ListView.separated(
+        padding: const EdgeInsets.all(12),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          return Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.folder)),
+              title: Text(
+                cat.name,
+                style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(12),
-              itemCount: categories.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final cat = categories[index];
-                return Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: ListTile(
-                    leading: const CircleAvatar(child: Icon(Icons.folder)),
-                    title: Text(
-                      cat.name,
-                      style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text('${cat.tables.length} bảng thời khóa biểu'),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) async {
-                        if (value == 'edit') {
-                          final controller = TextEditingController(text: cat.name);
-                          final newName = await showDialog<String>(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Đổi tên danh mục'),
-                              content: TextField(controller: controller),
-                              actions: [
-                                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-                                ElevatedButton(
+              subtitle: Text('${cat.tables.length} bảng thời khóa biểu'),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    final controller = TextEditingController(text: cat.name);
+                    final newName = await showDialog<String>(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('Đổi tên danh mục'),
+                        content: TextField(controller: controller),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+                          ElevatedButton(
                                   onPressed: () {
                                     final txt = controller.text.trim();
                                     if (txt.isNotEmpty) Navigator.pop(context, txt);

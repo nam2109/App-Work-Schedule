@@ -39,30 +39,25 @@ class ScheduleNotifier extends StateNotifier<List<ScheduleTable>> {
     );
   }
 
-  void addTable(ScheduleTable table) {
-    state = [...state, table];
-    _saveLocal();
-  }
+void addTable(ScheduleTable table) => _updateLocal([...state, table]);
 
-  void editTableName(int index, String newName) {
-    final updated = [...state];
-    updated[index].name = newName;
-    state = updated;
-    _saveLocal();
-  }
+void editTableName(int index, String newName) {
+  final updated = [...state];
+  updated[index].name = newName;
+  _updateLocal(updated);
+}
 
-  void deleteTable(int index) {
-    final updated = [...state]..removeAt(index);
-    state = updated;
-    _saveLocal();
-  }
+void deleteTable(int index) {
+  final updated = [...state]..removeAt(index);
+  _updateLocal(updated);
+}
 
-  void updateTable(int index, ScheduleTable updatedTable) {
-    final updated = [...state];
-    updated[index] = updatedTable;
-    state = updated;
-    _saveLocal();
-  }
+void updateTable(int index, ScheduleTable updatedTable) {
+  final updated = [...state];
+  updated[index] = updatedTable;
+  _updateLocal(updated);
+}
+
 
   Future<void> uploadToFirebase() async {
     await FirestoreService().saveCategory(
@@ -77,31 +72,31 @@ class ScheduleNotifier extends StateNotifier<List<ScheduleTable>> {
       _saveLocal();
     }
   }
-    /// Đồng bộ thông minh: so sánh updatedAt
-  Future<String> syncWithFirebase() async {
-    final remote = await FirestoreService().loadCategory(category.id);
-    final localCategory = category.copyWith(tables: state);
-    if (remote == null) {
-      // Firebase chưa có → upload
-      await FirestoreService().saveCategory(
-        localCategory.copyWith(updatedAt: DateTime.now()),
-      );
-      return 'Đã tải lên Firebase';
-    }
+void _updateLocal(List<ScheduleTable> newTables) {
+  state = newTables;
+  _saveLocal();
+}
 
-    if (localCategory.updatedAt.isAfter(remote.updatedAt)) {
-      await FirestoreService().saveCategory(
-        localCategory.copyWith(updatedAt: DateTime.now()),
-      );
-      return 'Đã đồng bộ: Local → Firebase';
-    } else if (remote.updatedAt.isAfter(localCategory.updatedAt)) {
-      state = remote.tables;
-      _saveLocal();
-      return 'Đã đồng bộ: Firebase → Local';
-    } else {
-      return 'Dữ liệu đã đồng bộ';
-    }
+
+    /// Đồng bộ thông minh: so sánh updatedAt
+Future<String> syncWithFirebase() async {
+  final remote = await FirestoreService().loadCategory(category.id);
+  final localCategory = category.copyWith(
+    tables: state,
+    updatedAt: DateTime.now(),
+  );
+
+  if (remote == null || localCategory.updatedAt.isAfter(remote.updatedAt)) {
+    await FirestoreService().saveCategory(localCategory);
+    return 'Đã đồng bộ: Local → Firebase';
+  } else if (remote.updatedAt.isAfter(category.updatedAt)) {
+    state = remote.tables;
+    _saveLocal();
+    return 'Đã đồng bộ: Firebase → Local';
+  } else {
+    return 'Dữ liệu đã đồng bộ';
   }
+}
 
 }
 
