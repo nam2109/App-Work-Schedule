@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/schedule.dart';
+import '../providers/schedule_provider.dart';
 
-class ScheduleDetailScreen extends StatefulWidget {
+class ScheduleDetailScreen extends ConsumerStatefulWidget {
   final ScheduleTable table;
-  final Function(ScheduleTable) onUpdate;
-  final List<ScheduleTable> allTables; // Thêm để biết tổng hợp
+  final List<ScheduleTable> allTables;
+  final Category category;
 
   const ScheduleDetailScreen({
     super.key,
     required this.table,
-    required this.onUpdate,
-    required this.allTables, // truyền từ HomeScreen
+    required this.allTables,
+    required this.category,
   });
 
   @override
-  State<ScheduleDetailScreen> createState() => _ScheduleDetailScreenState();
+  ConsumerState<ScheduleDetailScreen> createState() =>
+      _ScheduleDetailScreenState();
 }
 
-class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
+class _ScheduleDetailScreenState extends ConsumerState<ScheduleDetailScreen> {
   final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 
   String getTask(String day, int hour) {
     final item = widget.table.items.firstWhere(
@@ -34,31 +36,39 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
       (e) => e.day == day && e.hour == hour,
     );
     if (index >= 0) {
-      widget.table.items[index] = ScheduleItem(day: day, hour: hour, task: task);
+      widget.table.items[index] =
+          ScheduleItem(day: day, hour: hour, task: task);
     } else {
       widget.table.items.add(ScheduleItem(day: day, hour: hour, task: task));
     }
-    widget.onUpdate(widget.table);
+
+    // ✅ Cập nhật vào provider
+    final tables = ref.read(scheduleProvider(widget.category));
+    final idx = tables.indexWhere((t) => t.name == widget.table.name);
+    if (idx != -1) {
+      ref
+          .read(scheduleProvider(widget.category).notifier)
+          .updateTable(idx, widget.table);
+    }
   }
-  
+
   Map<String, Map<int, Color?>> buildSummaryMap() {
     final Map<String, Map<int, Color?>> summary = {};
-    final List<String> days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
     for (var day in days) {
       summary[day] = {};
       for (int hour = 1; hour <= 24; hour++) {
         Color? bg;
         for (var t in widget.allTables) {
-          if (t.name == widget.table.name) continue; // bỏ bảng hiện tại
+          if (t.name == widget.table.name) continue;
           final match = t.items
               .firstWhere(
-                (e) => e.day == day && e.hour == hour && e.task.isNotEmpty,
+                (e) =>
+                    e.day == day && e.hour == hour && e.task.isNotEmpty,
                 orElse: () => ScheduleItem(day: day, hour: hour, task: ''),
               )
               .task;
           if (match.isNotEmpty) {
-            bg = t.color.withOpacity(0.2); // làm mờ
+            bg = t.color.withOpacity(0.2);
             break;
           }
         }
@@ -67,6 +77,7 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
     }
     return summary;
   }
+
   Map<String, Map<int, String>> buildOtherTasksMap() {
     final Map<String, Map<int, String>> otherTasks = {};
     for (var day in days) {
@@ -83,7 +94,7 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
             tasks.add(item.task);
           }
         }
-        otherTasks[day]![hour] = tasks.join(', '); // có thể xuống dòng nếu muốn
+        otherTasks[day]![hour] = tasks.join(', ');
       }
     }
     return otherTasks;
@@ -91,120 +102,114 @@ class _ScheduleDetailScreenState extends State<ScheduleDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-  final summaryMap = buildSummaryMap();    // màu nền
-  final otherTasksMap = buildOtherTasksMap(); // nội dung làm mờ
-  final startHour = 4;
-  final endHour = 23;
-  final hourCount = endHour - startHour + 1;
-  
+    final summaryMap = buildSummaryMap();
+    final otherTasksMap = buildOtherTasksMap();
+    final startHour = 4;
+    final endHour = 23;
+    final hourCount = endHour - startHour + 1;
 
-  return Scaffold(
-    backgroundColor: Colors.white, // đổi màu tại đây
-    appBar: AppBar(
-      title: Text(widget.table.name),
-      backgroundColor: Colors.white, // đổi màu tại đây
-    ),
-    
-    body: InteractiveViewer(
-      constrained: false,
-      minScale: 0.01, // Zoom out gần như vô hạn
-      maxScale: 3.0, // Zoom in nhiều
-      child: SizedBox(
-        width: days.length * 80 + 100, // Chiều rộng dựa trên số cột
-        height: (hourCount + 1) * 60 + 100, // Chiều cao dựa trên số hàng
-        child: DataTable(
-          columnSpacing: 8, // hoặc 4 nếu muốn sát hơn
-          horizontalMargin: 0, // Bỏ khoảng cách 24px mặc định
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(widget.table.name),
+        backgroundColor: Colors.white,
+      ),
+      body: InteractiveViewer(
+        constrained: false,
+        minScale: 0.01,
+        maxScale: 3.0,
+        child: SizedBox(
+          width: days.length * 80 + 100,
+          height: (hourCount + 1) * 60 + 100,
+          child: DataTable(
+            columnSpacing: 8,
+            horizontalMargin: 0,
             columns: [
-              const DataColumn(
-                label: SizedBox(
-                  width: 30,
-              ),
-            ),
-            ...days.map((day) => DataColumn(
-              label: SizedBox(
-                width: 80,
-                child: Center(child: Text(day)),
-              ),
-            )).toList(),
-          ],
-          rows: List.generate(hourCount, (index) {
-            final hour = startHour + index;
-            return DataRow(cells: [
-              DataCell(
-                Center(
-                  child: Text('${hour}h'),
+              const DataColumn(label: SizedBox(width: 30)),
+              ...days.map(
+                (day) => DataColumn(
+                  label: SizedBox(
+                    width: 80,
+                    child: Center(child: Text(day)),
+                  ),
                 ),
               ),
-              ...days.map((day) {
-                final task = getTask(day, hour);
-                final bgColor = summaryMap[day]![hour]; // màu tổng hợp
-                final otherTaskText = otherTasksMap[day]![hour] ?? '';
-        
-                return DataCell(
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    // 1) Tap: set ngay tên bảng hiện tại cho ô
-                    onTap: () {
-                      final isSame = task == widget.table.name;
-                      setTask(day, hour, isSame ? '' : widget.table.name);
-                      setState(() {});
-                    },
-                    onLongPress: () async {
-                      // Cho phép nhập thủ công
-                      final controller = TextEditingController(text: task);
-                      final newTask = await showDialog<String>(
-                        context: context,
-                        builder: (_) => AlertDialog(
-                          title: Text('Nhập công việc ($day - ${hour}h)'),
-                          content: TextField(
-                            controller: controller,
-                            autofocus: true,
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, controller.text),
-                              child: const Text('OK'),
-                            )
-                          ],
-                        ),
-                      );
-                      if (newTask != null) {
-                        setTask(day, hour, newTask);
-                        setState(() {});
-                      }
-                    },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Container(
-                        width: 80,
-                        height: 40,
-                        alignment: Alignment.center,
-                        color: bgColor,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center, 
-                          children: [
-                            Text(task.isEmpty ? '-' : task),
-                            if (otherTaskText.isNotEmpty)
-                              Text(
-                                otherTaskText,
-                                style: TextStyle(
-                                  fontSize: 6,
-                                  color: Colors.black.withOpacity(0.3),
-                                ),
+            ],
+            rows: List.generate(hourCount, (index) {
+              final hour = startHour + index;
+              return DataRow(
+                cells: [
+                  DataCell(Center(child: Text('${hour}h'))),
+                  ...days.map((day) {
+                    final task = getTask(day, hour);
+                    final bgColor = summaryMap[day]![hour];
+                    final otherTaskText = otherTasksMap[day]![hour] ?? '';
+
+                    return DataCell(
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          final isSame = task == widget.table.name;
+                          setTask(day, hour, isSame ? '' : widget.table.name);
+                          setState(() {});
+                        },
+                        onLongPress: () async {
+                          final controller =
+                              TextEditingController(text: task);
+                          final newTask = await showDialog<String>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              title: Text('Nhập công việc ($day - ${hour}h)'),
+                              content: TextField(
+                                controller: controller,
+                                autofocus: true,
                               ),
-                          ],
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(
+                                      context, controller.text),
+                                  child: const Text('OK'),
+                                )
+                              ],
+                            ),
+                          );
+                          if (newTask != null) {
+                            setTask(day, hour, newTask);
+                            setState(() {});
+                          }
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Container(
+                            width: 80,
+                            height: 40,
+                            alignment: Alignment.center,
+                            color: bgColor,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(task.isEmpty ? '-' : task),
+                                if (otherTaskText.isNotEmpty)
+                                  Text(
+                                    otherTaskText,
+                                    style: TextStyle(
+                                      fontSize: 6,
+                                      color: Colors.black.withOpacity(0.3),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ]);
-          }),
+                    );
+                  }).toList(),
+                ],
+              );
+            }),
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

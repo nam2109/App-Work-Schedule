@@ -119,7 +119,7 @@ class ScheduleScreen extends ConsumerWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => SummaryScreen(tables: tables)),
+                  MaterialPageRoute(builder: (_) => SummaryScreen(category: category)),
                 );
               },
             ),
@@ -187,20 +187,17 @@ class ScheduleScreen extends ConsumerWidget {
                             PopupMenuItem(value: 'delete', child: Text('Xóa')),
                           ],
                         ),
-                        onTap: () async {
-                          final updated = await Navigator.push<ScheduleTable>(
+                        onTap: () {
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => ScheduleDetailScreen(
                                 table: table,
-                                onUpdate: (u) {},
                                 allTables: tables,
+                                category: category,
                               ),
                             ),
                           );
-                          if (updated != null) {
-                            notifier.updateTable(index, updated);
-                          }
                         },
                       ),
                     );
