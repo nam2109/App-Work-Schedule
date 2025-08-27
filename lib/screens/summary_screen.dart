@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/schedule.dart';
-
+import 'schedule_detail_screen.dart';
 class SummaryScreen extends StatelessWidget {
   final List<ScheduleTable> tables;
   const SummaryScreen({super.key, required this.tables});
@@ -68,32 +68,91 @@ class SummaryScreen extends StatelessWidget {
                 ...days.map((day) {
                   final taskList = summary[day]![hour]!;
           
-                  return DataCell(
-                    Container(
-                      width: 85, // Cố định rộng ô cho đẹp
-                      height: 40, // Cố định cao ô
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(
-                          color: taskList.isEmpty
-                              ? Colors.transparent // không có viền nếu trống
-                              : (taskList.length == 1
-                                  ? taskList.first.color // màu bảng nếu chỉ 1 bảng
-                                  : Colors.grey), // màu xám nếu nhiều bảng
-                          width: 1, // độ dày viền
+return DataCell(
+  InkWell(
+    onTap: () {
+      if (taskList.isEmpty) return;
+
+      if (taskList.length == 1) {
+        // Nếu chỉ có 1 task
+        final selectedTask = taskList.first;
+        final selectedTable = tables.firstWhere(
+          (t) => t.color == selectedTask.color,
+          orElse: () => tables.first,
+        );
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ScheduleDetailScreen(
+              table: selectedTable,
+              onUpdate: (u) {},
+              allTables: tables,
+            ),
+          ),
+        );
+      } else {
+        // Nếu có nhiều task → chọn bảng
+        showModalBottomSheet(
+          context: context,
+          builder: (_) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Chọn bảng để mở', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              ...taskList.map((t) {
+                final selectedTable = tables.firstWhere((tab) => tab.color == t.color);
+                return ListTile(
+                  leading: CircleAvatar(backgroundColor: t.color),
+                  title: Text(selectedTable.name),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ScheduleDetailScreen(
+                          table: selectedTable,
+                          onUpdate: (u) {},
+                          allTables: tables,
                         ),
-                        borderRadius: BorderRadius.circular(10), // bo góc cho đẹp
                       ),
-                      padding: const EdgeInsets.all(4),
-                      alignment: Alignment.center,
-                      child: Text(
-                        taskList.isEmpty
-                          ? '-'
-                          : taskList.map((t) => t.task).toSet().join('\n'), // ✅ Loại trùng
-                        style: const TextStyle(fontSize: 9),
-                      ),
-                    ),
-                  );
+                    );
+                  },
+                );
+              }),
+            ],
+          ),
+        );
+      }
+    },
+    child: Container(
+      width: 85,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(
+          color: taskList.isEmpty
+              ? Colors.transparent
+              : (taskList.length == 1
+                  ? taskList.first.color
+                  : Colors.grey),
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      padding: const EdgeInsets.all(4),
+      alignment: Alignment.center,
+      child: Text(
+        taskList.isEmpty
+          ? '-'
+          : taskList.map((t) => t.task).toSet().join('\n'),
+        style: const TextStyle(fontSize: 9),
+      ),
+    ),
+  ),
+);
                 }).toList(),
               ]);
             }),
