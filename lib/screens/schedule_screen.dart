@@ -17,17 +17,36 @@ class ScheduleScreen extends ConsumerWidget {
     final notifier = ref.read(scheduleProvider(category).notifier);
     final nameController = TextEditingController();
 
-    Color getRandomColor() {
-      final used = tables.map((e) => e.color).toSet();
-      final availableColors = const [
-        Colors.red, Colors.blue, Colors.green, Colors.orange,
-        Colors.purple, Colors.teal, Colors.brown, Colors.pink,
-        Colors.indigo, Colors.cyan
-      ];
-      final unused = availableColors.where((c) => !used.contains(c)).toList();
-      if (unused.isEmpty) return availableColors[Random().nextInt(availableColors.length)];
-      return unused[Random().nextInt(unused.length)];
-    }
+Color getRandomColor() {
+  final usedValues = tables.map((e) => e.color.value).toSet();
+  final availableColors = const [
+    Colors.red,
+    Colors.blue,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.pink,
+    Colors.yellow,
+    Colors.cyan,
+    Colors.brown,
+    Colors.indigo,
+  ];
+
+  // Lọc các màu có value chưa dùng
+  final unusedColors = availableColors.where((c) => !usedValues.contains(c.value)).toList();
+
+  if (unusedColors.isNotEmpty) {
+    return unusedColors[Random().nextInt(unusedColors.length)];
+  }
+
+  // Nếu hết tất cả màu trong danh sách, tạo màu mới ngẫu nhiên
+  return Color.fromARGB(
+    255,
+    Random().nextInt(256),
+    Random().nextInt(256),
+    Random().nextInt(256),
+  );
+}
 
     void _showAddTableDialog() {
       showModalBottomSheet(
