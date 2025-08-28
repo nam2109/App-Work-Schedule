@@ -1,7 +1,13 @@
 import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'package:gallery_saver_plus/gallery_saver.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../models/training_package.dart';
 import '../../models/attendance.dart';
 import '../../services/package_service.dart';
@@ -56,38 +62,44 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (photo != null) ...[
-                    AspectRatio(aspectRatio: 16/9, child: Image.file(photo!, fit: BoxFit.cover)),
+                    AspectRatio(aspectRatio: 16 / 9, child: Image.file(photo!, fit: BoxFit.cover)),
                     const SizedBox(height: 8),
                   ],
                   Row(children: [
-                    Expanded(child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await _picker.pickImage(source: ImageSource.camera, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
-                        if (picked != null) setM(() => photo = File(picked.path));
-                      },
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Chụp ảnh'),
-                    )),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await _picker.pickImage(source: ImageSource.camera, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
+                          if (picked != null) setM(() => photo = File(picked.path));
+                        },
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Chụp ảnh'),
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Expanded(child: ElevatedButton.icon(
-                      onPressed: photo == null ? null : () async {
-                        final c = clients[selected];
-                        try {
-                          await _svc.checkinWithPhoto(
-                            packageId: widget.pkg.id,
-                            clientName: c.name,
-                            clientPhone: c.phone,
-                            photo: photo!,
-                          );
-                          if (mounted) Navigator.pop(context);
-                          if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Điểm danh thành công')));
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
-                        }
-                      },
-                      icon: const Icon(Icons.check),
-                      label: const Text('Xác nhận'),
-                    )),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: photo == null
+                            ? null
+                            : () async {
+                                final c = clients[selected];
+                                try {
+                                  await _svc.checkinWithPhoto(
+                                    packageId: widget.pkg.id,
+                                    clientName: c.name,
+                                    clientPhone: c.phone,
+                                    photo: photo!,
+                                  );
+                                  if (mounted) Navigator.pop(context);
+                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Điểm danh thành công')));
+                                } catch (e) {
+                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                                }
+                              },
+                        icon: const Icon(Icons.check),
+                        label: const Text('Xác nhận'),
+                      ),
+                    ),
                   ])
                 ],
               ),
@@ -95,6 +107,15 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
           );
         });
       },
+    );
+  }
+
+  // Mở trang full screen để xem ảnh + nút tải về
+  void _openFullScreen(String photoUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => FullScreenImagePage(photoUrl: photoUrl),
+      ),
     );
   }
 
@@ -124,7 +145,7 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                 const SizedBox(height: 8),
                 Row(children: [
                   ElevatedButton.icon(
-                    onPressed: _openCheckinDialog,
+                    onPressed: p.remainingSessions > 0 ? _openCheckinDialog : null,
                     icon: const Icon(Icons.verified_user),
                     label: const Text('Điểm danh'),
                   ),
@@ -149,11 +170,14 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                     final a = list[i];
                     final time = DateFormat('dd/MM HH:mm').format(a.checkinTime.toDate());
                     return ListTile(
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: a.photoUrl.startsWith('http')
-                            ? Image.network(a.photoUrl, width: 56, height: 56, fit: BoxFit.cover)
-                            : Image.file(File(a.photoUrl), width: 56, height: 56, fit: BoxFit.cover),
+                      leading: GestureDetector(
+                        onTap: () => _openFullScreen(a.photoUrl),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: a.photoUrl.startsWith('http')
+                              ? Image.network(a.photoUrl, width: 56, height: 56, fit: BoxFit.cover)
+                              : Image.file(File(a.photoUrl), width: 56, height: 56, fit: BoxFit.cover),
+                        ),
                       ),
                       title: Text(a.clientName),
                       subtitle: Text(time),
@@ -164,6 +188,100 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
             ),
           )
         ],
+      ),
+    );
+  }
+}
+
+/// Full screen page with download button
+class FullScreenImagePage extends StatefulWidget {
+  final String photoUrl;
+  const FullScreenImagePage({super.key, required this.photoUrl});
+
+  @override
+  State<FullScreenImagePage> createState() => _FullScreenImagePageState();
+}
+
+class _FullScreenImagePageState extends State<FullScreenImagePage> {
+  bool _saving = false;
+
+Future<void> _saveImage() async {
+  setState(() => _saving = true);
+  try {
+    Uint8List bytes;
+    if (widget.photoUrl.startsWith('http')) {
+      final resp = await http.get(Uri.parse(widget.photoUrl));
+      if (resp.statusCode != 200) throw Exception('Tải ảnh thất bại: ${resp.statusCode}');
+      bytes = resp.bodyBytes;
+    } else {
+      final file = File(widget.photoUrl);
+      if (!await file.exists()) throw Exception('File không tồn tại');
+      bytes = await file.readAsBytes();
+    }
+
+    // 🔽 Lưu tạm file rồi dùng GallerySaver
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/img_${DateTime.now().millisecondsSinceEpoch}.jpg');
+    await file.writeAsBytes(bytes);
+
+    final success = await GallerySaver.saveImage(file.path);
+
+    if (success == true) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã lưu ảnh vào thư viện')),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lưu ảnh thất bại')),
+        );
+      }
+    }
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi lưu ảnh: $e')),
+      );
+    }
+  } finally {
+    if (mounted) setState(() => _saving = false);
+  }
+}
+
+  @override
+  Widget build(BuildContext context) {
+    final url = widget.photoUrl;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Xem ảnh'),
+        actions: [
+          IconButton(
+            onPressed: _saving ? null : _saveImage,
+            icon: _saving ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.download),
+            tooltip: 'Tải về',
+          ),
+        ],
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          panEnabled: true,
+          minScale: 1.0,
+          maxScale: 4.0,
+          child: url.startsWith('http')
+              ? Image.network(url, fit: BoxFit.contain, loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
+                          : null,
+                    ),
+                  );
+                })
+              : Image.file(File(url), fit: BoxFit.contain),
+        ),
       ),
     );
   }

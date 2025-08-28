@@ -4,6 +4,7 @@ import '../../models/training_package.dart';
 import '../../services/package_service.dart';
 import 'package_detail_screen.dart';
 import 'package_form_screen.dart';
+import 'PackageHistoryScreen.dart';
 
 class PackageListScreen extends StatelessWidget {
   const PackageListScreen({super.key});
@@ -13,7 +14,21 @@ class PackageListScreen extends StatelessWidget {
     final service = PackageService();
     final currency = NumberFormat.decimalPattern();
     return Scaffold(
-      appBar: AppBar(title: const Text('Gói tập')), 
+    appBar: AppBar(
+      title: const Text('Gói tập'),
+      actions: [
+        IconButton(
+          tooltip: 'Lịch sử gói',
+          icon: const Icon(Icons.history),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PackageHistoryScreen()),
+            );
+          },
+        ),
+      ],
+    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
           context,
@@ -27,7 +42,8 @@ class PackageListScreen extends StatelessWidget {
         builder: (context, snap) {
           if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
           if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-          final list = snap.data!;
+          // lọc chỉ lấy gói còn buổi
+          final list = snap.data!.where((p) => p.remainingSessions > 0).toList();
           if (list.isEmpty) return const Center(child: Text('Chưa có gói tập'));
           return ListView.separated(
             padding: const EdgeInsets.all(12),
