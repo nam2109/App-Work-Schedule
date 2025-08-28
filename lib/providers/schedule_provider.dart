@@ -57,7 +57,13 @@ void updateTable(int index, ScheduleTable updatedTable) {
   updated[index] = updatedTable;
   _updateLocal(updated);
 }
-
+ void duplicateTable(int index) {
+    final tableToDuplicate = state[index];
+    final duplicated = tableToDuplicate.copyWith(
+      name: '${tableToDuplicate.name} (copy)',
+    );
+    state = [...state, duplicated];
+  }
 
   Future<void> uploadToFirebase() async {
     await FirestoreService().saveCategory(

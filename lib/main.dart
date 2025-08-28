@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:work_schedule_app/screens/category_screen.dart';
+import 'package:work_schedule_app/screens/dashboard_screen.dart';
 import 'firebase_options.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Work Schedule App',
       theme: ThemeData(primarySwatch: Colors.blue),
-      home: const CategoryScreen(),
+      home: const DashboardScreen(),
     );
   }
 }
