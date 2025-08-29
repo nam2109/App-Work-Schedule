@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:work_schedule_app/screens/students/student_list_screen.dart';
 import './packages/package_list_screen.dart';
 import 'category_screen.dart';
 
@@ -129,7 +130,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                onTap: () {},
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => StudentListScreen()),
+                                  );
+
+                                },
                               ),
                               DashboardActionCard(
                                 title: 'Thống kê',

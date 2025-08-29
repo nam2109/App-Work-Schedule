@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../models/training_package.dart';
 import '../../services/package_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../students/student_list_screen.dart';
 
 
 class PackageFormScreen extends StatefulWidget {
@@ -52,7 +53,11 @@ class _PackageFormScreenState extends State<PackageFormScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final clients = List.generate(_pair, (i) => PackageClient(name: _clientCtrls[i].text.trim(), phone: _phoneCtrls[i].text.trim()));
+    final clients = List.generate(_pair, (i) => PackageClient(
+      name: _clientCtrls[i].text.trim(),
+      phone: _phoneCtrls[i].text.trim()
+    ));
+
     final pkg = TrainingPackage(
       id: '',
       packageName: _nameCtrl.text.trim(),
@@ -63,8 +68,20 @@ class _PackageFormScreenState extends State<PackageFormScreen> {
       expireDate: _expire,
       createdAt: Timestamp.now(),
     );
+
     await PackageService().createPackage(pkg);
-    if (mounted) Navigator.pop(context);
+
+    // Sau khi lưu gói, chuyển sang trang quản lý học viên và truyền danh sách tên
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StudentListScreen(
+            initialNames: clients.map((c) => c.name).where((n) => n.isNotEmpty).toList(),
+          ),
+        ),
+      );
+    }
   }
 
   @override
