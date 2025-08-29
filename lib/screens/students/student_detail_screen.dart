@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:work_schedule_app/screens/students/MeasurementDetailScreen.dart';
 import '../../services/student_service.dart';
 import '../../models/student.dart';
 
@@ -16,8 +17,10 @@ class StudentDetailScreen extends StatefulWidget {
 
 class _StudentDetailScreenState extends State<StudentDetailScreen> {
   final _fs = StudentService();
-
   final DateFormat df = DateFormat('dd/MM/yyyy HH:mm');
+
+  // selected measurements map: id -> Measurement
+  final Map<String, Measurement> _selected = {};
 
   void _openAddMeasurementDialog() {
     showDialog(
@@ -25,17 +28,64 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
       builder: (_) => AddMeasurementDialog(
         studentId: widget.studentId,
         onSaved: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đã lưu số đo')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã lưu số đo')));
         },
       ),
     );
   }
 
+  void _toggleSelect(Measurement m) {
+    setState(() {
+      if (_selected.containsKey(m.id)) {
+        _selected.remove(m.id);
+      } else {
+        if (_selected.length < 2) {
+          _selected[m.id] = m;
+        } else {
+          // nếu đã chọn 2, thay 1 (hành vi này là tùy ý — mình thông báo)
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chỉ được chọn tối đa 2 lần đo để so sánh')));
+        }
+      }
+    });
+  }
+
+  void _openCompare() {
+    if (_selected.length != 2) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hãy chọn đúng 2 lần đo để so sánh')));
+      return;
+    }
+    final list = _selected.values.toList();
+    // sort by createdAt so older -> newer (tuỳ ý)
+    list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => CompareMeasurementScreen(oldM: list[0], newM: list[1])),
+    );
+  }
+
+  void _clearSelection() {
+    setState(() => _selected.clear());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.studentName)),
+      appBar: AppBar(
+        title: Text(widget.studentName),
+        actions: [
+          if (_selected.isNotEmpty)
+            IconButton(
+              tooltip: 'Xoá chọn',
+              icon: const Icon(Icons.clear),
+              onPressed: _clearSelection,
+            ),
+          IconButton(
+            tooltip: 'So sánh (chọn 2)',
+            icon: const Icon(Icons.compare_arrows),
+            onPressed: _selected.length == 2 ? _openCompare : null,
+          ),
+        ],
+      ),
       body: StreamBuilder<List<Measurement>>(
         stream: _fs.streamMeasurements(widget.studentId),
         builder: (context, snap) {
@@ -52,11 +102,13 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, i) {
               final m = items[i];
+              final isSelected = _selected.containsKey(m.id);
               return Card(
+                color: isSelected ? Colors.blue.shade50 : null,
                 elevation: 2,
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(12),
-                  title: Text('Cân nặng: ${m.weight} kg — Chiều cao: ${m.height} cm'),
+                  title: Text('Cân nặng: ${m.weight ?? '-'} kg — Chiều cao: ${m.height ?? '-'} cm'),
                   subtitle: Text('${df.format(m.createdAt)}${m.note != null ? ' — ${m.note}' : ''}'),
                   trailing: m.localImages.isNotEmpty
                       ? SizedBox(
@@ -67,6 +119,21 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
                           ),
                         )
                       : null,
+                  isThreeLine: true,
+                  onTap: () {
+                    // nếu đang có selection, tap sẽ toggle chọn
+                    if (_selected.isNotEmpty) {
+                      _toggleSelect(m);
+                      return;
+                    }
+                    // không có selection -> mở chi tiết
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => MeasurementDetailScreen(measurement: m)));
+                  },
+                  onLongPress: () {
+                    // long press để chọn (toggle)
+                    _toggleSelect(m);
+                  },
+                  leading: isSelected ? const Icon(Icons.check_circle, color: Colors.blue) : const SizedBox.shrink(),
                 ),
               );
             },
@@ -82,7 +149,7 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
   }
 }
 
-/// Dialog thêm số đo
+/// Dialog thêm số đo (giữ nguyên như trước)
 class AddMeasurementDialog extends StatefulWidget {
   final String studentId;
   final VoidCallback onSaved;
@@ -136,7 +203,11 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
   Future<void> _addMeasurement() async {
     final weight = double.tryParse(_weightCtrl.text.trim());
     final height = double.tryParse(_heightCtrl.text.trim());
-    if (weight == null || height == null) return;
+
+    if (weight == null || height == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập cân nặng và chiều cao hợp lệ')));
+      return;
+    }
 
     final measurement = Measurement(
       id: '',
@@ -196,9 +267,7 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
                     width: 60,
                     height: 60,
                     color: Colors.grey[200],
-                    child: img != null
-                        ? Image.file(img, fit: BoxFit.cover)
-                        : const Icon(Icons.add_a_photo, size: 20),
+                    child: img != null ? Image.file(img, fit: BoxFit.cover) : const Icon(Icons.add_a_photo, size: 20),
                   ),
                 );
               }),
@@ -211,6 +280,141 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
         ElevatedButton(onPressed: _addMeasurement, child: const Text('Lưu')),
       ],
+    );
+  }
+}
+
+/// Screen so sánh 2 lần đo
+class CompareMeasurementScreen extends StatelessWidget {
+  final Measurement oldM;
+  final Measurement newM;
+
+  const CompareMeasurementScreen({Key? key, required this.oldM, required this.newM}) : super(key: key);
+
+  String _showNum(double? v) => v == null ? '-' : v.toStringAsFixed(1);
+
+  String _diffString(double? oldV, double? newV) {
+    if (oldV == null || newV == null) return '-';
+    final diff = newV - oldV;
+    final sign = diff > 0 ? '+' : '';
+    return '$sign${diff.toStringAsFixed(1)}';
+  }
+
+  Color _diffColor(double? oldV, double? newV) {
+    if (oldV == null || newV == null) return Colors.black;
+    final diff = newV - oldV;
+    if (diff > 0) return Colors.green;
+    if (diff < 0) return Colors.red;
+    return Colors.black;
+  }
+
+  Widget _row(String label, double? oldV, double? newV) {
+    final diff = _diffString(oldV, newV);
+    final color = _diffColor(oldV, newV);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(flex: 3, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
+          Expanded(flex: 2, child: Text(_showNum(oldV), textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text(_showNum(newV), textAlign: TextAlign.center)),
+          Expanded(flex: 2, child: Text(diff, textAlign: TextAlign.center, style: TextStyle(color: color))),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final df = DateFormat('dd/MM/yyyy HH:mm');
+    return Scaffold(
+      appBar: AppBar(title: const Text('So sánh số đo')),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Cũ: ${df.format(oldM.createdAt)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('Mới: ${df.format(newM.createdAt)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              // header row
+              Row(
+                children: const [
+                  Expanded(flex: 3, child: Text('', style: TextStyle(fontWeight: FontWeight.w600))),
+                  Expanded(flex: 2, child: Text('Cũ', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
+                  Expanded(flex: 2, child: Text('Mới', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
+                  Expanded(flex: 2, child: Text('Δ', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
+                ],
+              ),
+              const Divider(),
+              _row('Cân nặng (kg)', oldM.weight, newM.weight),
+              _row('Chiều cao (cm)', oldM.height, newM.height),
+              _row('Vai (cm)', oldM.shoulder, newM.shoulder),
+              _row('Eo (cm)', oldM.waist, newM.waist),
+              _row('Bụng rốn (cm)', oldM.belly, newM.belly),
+              _row('Mông (cm)', oldM.hip, newM.hip),
+              _row('Đùi (cm)', oldM.thigh, newM.thigh),
+              _row('Bắp chân (cm)', oldM.calf, newM.calf),
+              _row('Bắp tay (cm)', oldM.arm, newM.arm),
+              _row('Ngực (cm)', oldM.chest, newM.chest),
+              const SizedBox(height: 16),
+              // images compare (show up to 2 images from each)
+              if (oldM.localImages.isNotEmpty || newM.localImages.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Ảnh so sánh', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Cũ', style: TextStyle(fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: oldM.localImages.map((p) => Image.file(File(p), width: 100, height: 100, fit: BoxFit.cover)).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              const Text('Mới', style: TextStyle(fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: newM.localImages.map((p) => Image.file(File(p), width: 100, height: 100, fit: BoxFit.cover)).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 12),
+              if ((oldM.note ?? '').isNotEmpty || (newM.note ?? '').isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Ghi chú', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Text('Cũ: ${oldM.note ?? '-'}'),
+                    const SizedBox(height: 4),
+                    Text('Mới: ${newM.note ?? '-'}'),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
