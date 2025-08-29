@@ -12,7 +12,7 @@ class Measurement {
   final double? calf;     // bắp chân
   final double? arm;      // bắp tay
   final double? chest;    // ngực
-  final List<String>? photos; // URL ảnh body (tối đa 4)
+  final List<String> localImages; // đường dẫn ảnh lưu trên máy
   final String? note;
   final DateTime createdAt;
 
@@ -28,7 +28,7 @@ class Measurement {
     this.calf,
     this.arm,
     this.chest,
-    this.photos,
+    required this.localImages,
     this.note,
     required this.createdAt,
   });
@@ -44,7 +44,7 @@ class Measurement {
         'calf': calf,
         'arm': arm,
         'chest': chest,
-        'photos': photos,
+        'localImages': localImages,
         'note': note,
         'createdAt': Timestamp.fromDate(createdAt),
       };
@@ -63,7 +63,7 @@ class Measurement {
       calf: (data['calf'] as num?)?.toDouble(),
       arm: (data['arm'] as num?)?.toDouble(),
       chest: (data['chest'] as num?)?.toDouble(),
-      photos: (data['photos'] as List<dynamic>?)?.cast<String>(),
+      localImages: List<String>.from(data['localImages'] ?? []),
       note: data['note'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );

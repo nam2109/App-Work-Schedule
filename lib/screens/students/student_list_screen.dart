@@ -63,40 +63,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () => _showAddStudentDialog(),
-      ),
     );
   }
 
-  void _showAddStudentDialog() {
-    final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Thêm học viên'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Tên')),
-            TextField(controller: phoneCtrl, decoration: const InputDecoration(labelText: 'Số điện thoại')),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-          ElevatedButton(
-            onPressed: () async {
-              final name = nameCtrl.text.trim();
-              if (name.isEmpty) return;
-              await _fs.createStudent(name, phone: phoneCtrl.text.trim());
-              Navigator.pop(context);
-            },
-            child: const Text('Lưu'),
-          )
-        ],
-      ),
-    );
-  }
 }

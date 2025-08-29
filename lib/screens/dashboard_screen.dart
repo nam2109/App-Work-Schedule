@@ -62,8 +62,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
                 _buildSearchBar(),
                 const SizedBox(height: 18),
-                _buildSummaryCards(),
-                const SizedBox(height: 18),
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(12),
@@ -219,16 +217,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildSummaryCards() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _MiniStatCard(title: 'Khách', value: clients.toString()),
-        _MiniStatCard(title: 'Buổi còn', value: remainingSessions.toString()),
-        _MiniStatCard(title: 'Điểm danh hôm nay', value: todayCheckins.toString()),
-      ],
-    );
-  }
+
 }
 
 class _MiniStatCard extends StatelessWidget {

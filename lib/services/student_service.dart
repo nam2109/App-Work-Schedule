@@ -87,8 +87,16 @@ Future<void> addMeasurement(
   });
 }
 
+  // Lưu measurement
+  Future<void> addFullMeasurement(String studentId, Measurement m) async {
+    await _studentsCol.doc(studentId).collection('measurements').add(m.toJson());
+  }
+
+  // Stream measurements
   Stream<List<Measurement>> streamMeasurements(String studentId) {
-    return measurementsRef(studentId)
+    return _studentsCol
+        .doc(studentId)
+        .collection('measurements')
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) => snap.docs.map((d) => Measurement.fromDoc(d)).toList());
