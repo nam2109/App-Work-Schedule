@@ -1,3 +1,4 @@
+// lib/models/training_package.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PackageClient {
@@ -7,14 +8,14 @@ class PackageClient {
   PackageClient({required this.name, required this.phone});
 
   Map<String, dynamic> toJson() => {
-    'name': name,
-    'phone': phone,
-  };
+        'name': name,
+        'phone': phone,
+      };
 
   factory PackageClient.fromJson(Map<String, dynamic> json) => PackageClient(
-    name: json['name'] ?? '',
-    phone: json['phone'] ?? '',
-  );
+        name: json['name'] ?? '',
+        phone: json['phone'] ?? '',
+      );
 }
 
 class TrainingPackage {
@@ -26,6 +27,7 @@ class TrainingPackage {
   final int price;                 // giá gói (VND)
   final DateTime expireDate;       // ngày hết hạn
   final Timestamp createdAt;       // để sort
+  final DateTime? finishDate;      // ngày hoàn tất (nullable)
 
   TrainingPackage({
     required this.id,
@@ -36,17 +38,24 @@ class TrainingPackage {
     required this.price,
     required this.expireDate,
     required this.createdAt,
+    this.finishDate,
   });
 
-  Map<String, dynamic> toJson() => {
-    'packageName': packageName,
-    'clients': clients.map((e) => e.toJson()).toList(),
-    'totalSessions': totalSessions,
-    'remainingSessions': remainingSessions,
-    'price': price,
-    'expireDate': Timestamp.fromDate(expireDate),
-    'createdAt': createdAt,
-  };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'packageName': packageName,
+      'clients': clients.map((e) => e.toJson()).toList(),
+      'totalSessions': totalSessions,
+      'remainingSessions': remainingSessions,
+      'price': price,
+      'expireDate': Timestamp.fromDate(expireDate),
+      'createdAt': createdAt,
+    };
+    if (finishDate != null) {
+      map['finishDate'] = Timestamp.fromDate(finishDate!);
+    }
+    return map;
+  }
 
   factory TrainingPackage.fromDoc(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
@@ -59,8 +68,10 @@ class TrainingPackage {
       totalSessions: (data['totalSessions'] ?? 0) as int,
       remainingSessions: (data['remainingSessions'] ?? 0) as int,
       price: (data['price'] ?? 0) as int,
-      expireDate: (data['expireDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      expireDate:
+          (data['expireDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
       createdAt: (data['createdAt'] as Timestamp?) ?? Timestamp.now(),
+      finishDate: (data['finishDate'] as Timestamp?)?.toDate(),
     );
   }
 }

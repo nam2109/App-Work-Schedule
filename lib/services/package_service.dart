@@ -56,8 +56,18 @@ class PackageService {
       final remaining = (data['remainingSessions'] ?? 0) as int;
       if (remaining <= 0) throw Exception('Gói tập đã hết buổi');
 
-      // update remainingSessions - 1
-      txn.update(pkgRef, {'remainingSessions': remaining - 1});
+      final newRemaining = remaining - 1;
+      final Map<String, dynamic> updateMap = {
+        'remainingSessions': newRemaining,
+      };
+
+      // nếu sau khi trừ bằng 0 => đánh dấu finishDate
+      if (newRemaining == 0) {
+        updateMap['finishDate'] = Timestamp.now();
+      }
+
+      // update remainingSessions (và có thể finishDate)
+      txn.update(pkgRef, updateMap);
 
       // add attendance record (photoUrl lưu đường dẫn file local)
       final newAttendance = {
@@ -70,6 +80,13 @@ class PackageService {
       txn.set(_attendanceCol.doc(), newAttendance);
     });
   }
+  // Lấy tất cả attendance (dùng cho thống kê)
+  Stream<List<AttendanceRecord>> streamAllAttendance() {
+    return _attendanceCol
+        .orderBy('checkinTime', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => AttendanceRecord.fromDoc(d)).toList());
+  }
 
   Stream<List<AttendanceRecord>> streamAttendanceByPackage(String packageId) {
     return _attendanceCol
@@ -78,4 +95,5 @@ class PackageService {
         .snapshots()
         .map((s) => s.docs.map((d) => AttendanceRecord.fromDoc(d)).toList());
   }
+  
 }

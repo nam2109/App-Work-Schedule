@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:work_schedule_app/screens/statistics/package_revenue_stats_screen.dart';
 import 'package:work_schedule_app/screens/students/student_list_screen.dart';
 import './packages/package_list_screen.dart';
 import 'category_screen.dart';
@@ -133,7 +134,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     context,
                                     MaterialPageRoute(builder: (context) => StudentListScreen()),
                                   );
-
                                 },
                               ),
                               DashboardActionCard(
@@ -145,7 +145,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                onTap: () {},
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => PackageRevenueStatsScreen()),
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -220,40 +225,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 }
 
-class _MiniStatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  const _MiniStatCard({Key? key, required this.title, required this.value}) : super(key: key);
+// class _MiniStatCard extends StatelessWidget {
+//   final String title;
+//   final String value;
+//   const _MiniStatCard({Key? key, required this.title, required this.value}) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 6),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return Expanded(
+//       child: Container(
+//         margin: const EdgeInsets.symmetric(horizontal: 6),
+//         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+//         decoration: BoxDecoration(
+//           color: Colors.white,
+//           borderRadius: BorderRadius.circular(12),
+//           boxShadow: [
+//             BoxShadow(
+//               color: Colors.black.withOpacity(0.06),
+//               blurRadius: 8,
+//               offset: const Offset(0, 4),
+//             ),
+//           ],
+//         ),
+//         child: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+//             const SizedBox(height: 6),
+//             Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 class DashboardActionCard extends StatefulWidget {
   final String title;
