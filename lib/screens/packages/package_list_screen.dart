@@ -41,9 +41,8 @@ class _PackageListScreenState extends State<PackageListScreen> {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent, // to use rounded corners easily
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        // Use FractionallySizedBox to make it nearly full-screen
         return FractionallySizedBox(
           heightFactor: 0.95,
           child: _PackageAddModal(),
@@ -270,15 +269,22 @@ class _PackageAddModalState extends State<_PackageAddModal> {
   int _pair = 1;
   int _total = 12;
   int _price = 0;
-  DateTime _expire = DateTime.now().add(const Duration(days: 30));
+  late DateTime _expire;
   final _clientCtrls = <TextEditingController>[];
   final _phoneCtrls = <TextEditingController>[];
   final service = PackageService();
+
+  // New controllers for numeric fields (easier to style and control)
+  late final TextEditingController _totalCtrl;
+  late final TextEditingController _priceCtrl;
 
   @override
   void initState() {
     super.initState();
     _ensureClientFields();
+    _totalCtrl = TextEditingController(text: _total.toString());
+    _priceCtrl = TextEditingController(text: _price == 0 ? '' : _price.toString());
+    _expire = DateTime.now().add(Duration(days: _total * 3));
   }
 
   void _ensureClientFields() {
@@ -296,6 +302,8 @@ class _PackageAddModalState extends State<_PackageAddModal> {
   @override
   void dispose() {
     _nameCtrl.dispose();
+    _totalCtrl.dispose();
+    _priceCtrl.dispose();
     for (var c in _clientCtrls) c.dispose();
     for (var p in _phoneCtrls) p.dispose();
     super.dispose();
@@ -311,76 +319,94 @@ class _PackageAddModalState extends State<_PackageAddModal> {
     if (picked != null && mounted) setState(() => _expire = picked);
   }
 
-Future<void> _submit() async {
-  if (!_addFormKey.currentState!.validate()) return;
+  InputDecoration _inputDecoration(String label, {String? hint}) {
+    final primary = Theme.of(context).primaryColor;
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: primary, width: 2),
+      ),
+      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+    );
+  }
 
-  final clients = List.generate(_pair, (i) => PackageClient(
-    name: _clientCtrls[i].text.trim(),
-    phone: _phoneCtrls[i].text.trim(),
-  ));
+  Future<void> _submit() async {
+    if (!_addFormKey.currentState!.validate()) return;
 
-  final pkg = TrainingPackage(
-    id: '',
-    packageName: _nameCtrl.text.trim(),
-    clients: clients,
-    totalSessions: _total,
-    remainingSessions: _total,
-    price: _price,
-    expireDate: _expire,
-    createdAt: Timestamp.now(),
-  );
+    final clients = List.generate(_pair, (i) => PackageClient(
+      name: _clientCtrls[i].text.trim(),
+      phone: _phoneCtrls[i].text.trim(),
+    ));
 
-  try {
-    // 1) tạo package
-    await service.createPackage(pkg);
+    final pkg = TrainingPackage(
+      id: '',
+      packageName: _nameCtrl.text.trim(),
+      clients: clients,
+      totalSessions: _total,
+      remainingSessions: _total,
+      price: _price,
+      expireDate: _expire,
+      createdAt: Timestamp.now(),
+    );
 
-    // 2) thêm học viên mới (nếu chưa có) vào Firestore
-    final studentsCol = FirebaseFirestore.instance.collection('students');
-    for (var c in clients) {
-      final phone = c.phone.trim();
-      final name = c.name.trim();
+    try {
+      await service.createPackage(pkg);
 
-      if (phone.isEmpty && name.isEmpty) continue;
+      final studentsCol = FirebaseFirestore.instance.collection('students');
+      for (var c in clients) {
+        final phone = c.phone.trim();
+        final name = c.name.trim();
 
-      if (phone.isNotEmpty) {
-        final q = await studentsCol.where('phone', isEqualTo: phone).limit(1).get();
-        if (q.docs.isNotEmpty) {
-          // update tên nếu cần
-          final doc = q.docs.first;
-          if ((doc['name'] ?? '').toString().isEmpty && name.isNotEmpty) {
-            await studentsCol.doc(doc.id).update({'name': name});
+        if (phone.isEmpty && name.isEmpty) continue;
+
+        if (phone.isNotEmpty) {
+          final q = await studentsCol.where('phone', isEqualTo: phone).limit(1).get();
+          if (q.docs.isNotEmpty) {
+            final doc = q.docs.first;
+            if ((doc['name'] ?? '').toString().isEmpty && name.isNotEmpty) {
+              await studentsCol.doc(doc.id).update({'name': name});
+            }
+            continue;
           }
-          continue;
         }
+
+        await studentsCol.add({
+          'name': name,
+          'phone': phone,
+          'createdAt': Timestamp.now(),
+        });
       }
 
-      await studentsCol.add({
-        'name': name,
-        'phone': phone,
-        'createdAt': Timestamp.now(),
+      if (!mounted) return;
+
+      Navigator.of(context).pop(true);
+      Future.microtask(() {
+        Navigator.of(context).pushNamed('/students');
       });
-    }
-
-    if (!mounted) return;
-
-    // 3) đóng modal rồi mở trang danh sách học viên
-    Navigator.of(context).pop(true);
-    Future.microtask(() {
-      Navigator.of(context).pushNamed('/students');
-    });
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi tạo gói hoặc học viên: $e')),
-      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi tạo gói hoặc học viên: $e')),
+        );
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
     final df = DateFormat('dd/MM/yyyy');
-    // Use a Material container so it looks like a sheet with rounded corners
+
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -392,13 +418,11 @@ Future<void> _submit() async {
           left: 16,
           right: 16,
           top: 12,
-          // bottom padding respects keyboard (viewInsets)
           bottom: MediaQuery.of(context).viewInsets.bottom + 16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.max,
           children: [
-            // drag handle + title row
             Container(
               width: 40,
               height: 4,
@@ -414,84 +438,119 @@ Future<void> _submit() async {
                 ),
               ],
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
-                // ensure the sheet scrolls when keyboard is open / content long
+                physics: const BouncingScrollPhysics(),
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 child: Form(
                   key: _addFormKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextFormField(
-                        controller: _nameCtrl,
-                        decoration: const InputDecoration(labelText: 'Tên gói (VD: Ways Đồng Nai)'),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Nhập tên gói' : null,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(children: [
-                        const Text('Loại gói:'),
-                        const SizedBox(width: 12),
-                        DropdownButton<int>(
-                          value: _pair,
-                          items: const [
-                            DropdownMenuItem(value: 1, child: Text('1-1 (1 khách)')),
-                            DropdownMenuItem(value: 2, child: Text('1-2 (2 khách)')),
-                            DropdownMenuItem(value: 3, child: Text('1-3 (3 khách)')),
-                          ],
-                          onChanged: (v) {
-                            setState(() {
-                              _pair = v ?? 1;
-                              _ensureClientFields();
-                            });
-                          },
-                        )
-                      ]),
-                      const SizedBox(height: 12),
-                      ...List.generate(_pair, (i) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text('Khách ${i+1}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                          TextFormField(
-                            controller: _clientCtrls[i],
-                            decoration: const InputDecoration(labelText: 'Tên khách'),
-                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Nhập tên khách' : null,
+                      // Form card
+                      Card(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 2,
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(14.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                controller: _nameCtrl,
+                                decoration: _inputDecoration('Tên gói (VD: Ways Đồng Nai)'),
+                                validator: (v) => (v == null || v.trim().isEmpty) ? 'Nhập tên gói' : null,
+                              ),
+                              const SizedBox(height: 12),
+                              DropdownButtonFormField<int>(
+                                value: _pair,
+                                decoration: _inputDecoration('Loại gói'),
+                                items: const [
+                                  DropdownMenuItem(value: 1, child: Text('1-1 (1 khách)')),
+                                  DropdownMenuItem(value: 2, child: Text('1-2 (2 khách)')),
+                                  DropdownMenuItem(value: 3, child: Text('1-3 (3 khách)')),
+                                ],
+                                onChanged: (v) {
+                                  setState(() {
+                                    _pair = v ?? 1;
+                                    _ensureClientFields();
+                                  });
+                                },
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Client cards
+                              ...List.generate(_pair, (i) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Text('Khách ${i + 1}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: _clientCtrls[i],
+                                        decoration: _inputDecoration('Tên khách'),
+                                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Nhập tên khách' : null,
+                                      ),
+                                      const SizedBox(height: 8),
+                                      TextFormField(
+                                        controller: _phoneCtrls[i],
+                                        decoration: _inputDecoration('Số điện thoại'),
+                                        keyboardType: TextInputType.phone,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )),
+
+                              const SizedBox(height: 8),
+                              Row(children: [
+                                Expanded(child: TextFormField(
+                                  controller: _totalCtrl,
+                                  decoration: _inputDecoration('Số buổi'),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (v) => _total = int.tryParse(v) ?? 0,
+                                  validator: (v) => (int.tryParse(v ?? '') ?? 0) <= 0 ? 'Nhập số buổi > 0' : null,
+                                )),
+                                const SizedBox(width: 12),
+                                Expanded(child: TextFormField(
+                                  controller: _priceCtrl,
+                                  decoration: _inputDecoration('Giá (VND)'),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (v) => _price = int.tryParse(v) ?? 0,
+                                )),
+                              ]),
+
+                              const SizedBox(height: 12),
+                              Row(children: [
+                                Expanded(child: Text('Hết hạn: ${df.format(_expire)}', style: const TextStyle(fontWeight: FontWeight.w600))),
+                                TextButton.icon(onPressed: _pickExpire, icon: const Icon(Icons.date_range), label: const Text('Chọn ngày')),
+                              ]),
+                              const SizedBox(height: 14),
+                              ElevatedButton.icon(
+                                onPressed: _submit,
+                                icon: const Icon(Icons.save),
+                                label: const Text('Lưu gói tập'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  elevation: 4,
+                                ),
+                              ),
+                            ],
                           ),
-                          TextFormField(
-                            controller: _phoneCtrls[i],
-                            decoration: const InputDecoration(labelText: 'Số điện thoại'),
-                            keyboardType: TextInputType.phone,
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      )),
-                      Row(children: [
-                        Expanded(child: TextFormField(
-                          initialValue: _total.toString(),
-                          decoration: const InputDecoration(labelText: 'Số buổi'),
-                          keyboardType: TextInputType.number,
-                          onChanged: (v) => _total = int.tryParse(v) ?? 0,
-                          validator: (v) => (int.tryParse(v ?? '') ?? 0) <= 0 ? 'Nhập số buổi > 0' : null,
-                        )),
-                        const SizedBox(width: 12),
-                        Expanded(child: TextFormField(
-                          initialValue: _price == 0 ? '' : _price.toString(),
-                          decoration: const InputDecoration(labelText: 'Giá (VND)'),
-                          keyboardType: TextInputType.number,
-                          onChanged: (v) => _price = int.tryParse(v) ?? 0,
-                        )),
-                      ]),
-                      const SizedBox(height: 12),
-                      Row(children: [
-                        Expanded(child: Text('Hết hạn: ${df.format(_expire)}')),
-                        TextButton.icon(onPressed: _pickExpire, icon: const Icon(Icons.date_range), label: const Text('Chọn ngày')),
-                      ]),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _submit,
-                        icon: const Icon(Icons.save),
-                        label: const Text('Lưu gói tập'),
+                        ),
                       ),
+
                       const SizedBox(height: 12),
                     ],
                   ),
@@ -539,7 +598,7 @@ class _MiniStatCard extends StatelessWidget {
       ),
     );
   }
-}
+}   
 
 class _PackageCard extends StatelessWidget {
   final TrainingPackage pkg;
@@ -562,7 +621,6 @@ class _PackageCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // title row
             Row(
               children: [
                 Expanded(

@@ -60,8 +60,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
-                const SizedBox(height: 16),
-                _buildSearchBar(),
                 const SizedBox(height: 18),
                 Expanded(
                   child: Container(
@@ -191,34 +189,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: const [
-          Icon(Icons.search, color: Colors.white70),
-          SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              style: TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Tìm kiếm: tên khách, gói, ngày...',
-                hintStyle: TextStyle(color: Colors.white70),
-                border: InputBorder.none,
-                isDense: true,
-              ),
-            ),
-          ),
-          Icon(Icons.filter_list, color: Colors.white70),
-        ],
-      ),
     );
   }
 

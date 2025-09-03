@@ -468,6 +468,7 @@ class CompareMeasurementScreen extends StatelessWidget {
                         ),
                       ],
                     ),
+
                   ],
                 ),
               const SizedBox(height: 12),

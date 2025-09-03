@@ -40,116 +40,154 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
     }
   }
 
-  Future<void> _openCheckinDialog() async {
-    final clients = widget.pkg.clients;
-    int selected = 0;
-    File? photo;
+Future<void> _openCheckinDialog() async {
+  final presets = ["Pull day", "Push day","Shoulder day", "Leg day", "Upper day", "Lower day","Fullbody", "Khác"];
+  int selected = 0;
+  String? customContent;
+  File? photo;
 
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (_) {
-        return StatefulBuilder(builder: (context, setM) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Điểm danh', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close),
-                      )
-                    ],
+  await showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+    builder: (_) {
+      return StatefulBuilder(builder: (context, setM) {
+        return Padding(
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Điểm danh',
+                        style: TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700)),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Dropdown chọn nội dung tập
+                DropdownButtonFormField<int>(
+                  value: selected,
+                  items: List.generate(
+                    presets.length,
+                    (i) => DropdownMenuItem(
+                        value: i, child: Text(presets[i])),
                   ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    value: selected,
-                    items: List.generate(
-                      clients.length,
-                      (i) => DropdownMenuItem(value: i, child: Text(clients[i].name)),
+                  onChanged: (v) => setM(() => selected = v ?? 0),
+                  decoration:
+                      const InputDecoration(labelText: 'Chọn nội dung tập'),
+                ),
+                const SizedBox(height: 8),
+
+                // Nếu chọn "Khác" thì cho nhập thêm nội dung
+                if (presets[selected] == "Khác")
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: "Nhập nội dung buổi tập",
                     ),
-                    onChanged: (v) => setM(() => selected = v ?? 0),
-                    decoration: const InputDecoration(labelText: 'Chọn khách'),
+                    onChanged: (v) => customContent = v,
                   ),
-                  const SizedBox(height: 12),
 
-                  // Photo preview
-                  if (photo != null)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: AspectRatio(aspectRatio: 16 / 9, child: Image.file(photo!, fit: BoxFit.cover)),
+                const SizedBox(height: 12),
+
+                // Photo preview
+                if (photo != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: Image.file(photo!, fit: BoxFit.cover)),
+                  ),
+
+                if (photo != null) const SizedBox(height: 8),
+
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await _picker.pickImage(
+                            source: ImageSource.camera,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                            imageQuality: 85);
+                        if (picked != null)
+                          setM(() => photo = File(picked.path));
+                      },
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Camera'),
                     ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await _picker.pickImage(
+                            source: ImageSource.gallery,
+                            maxWidth: 1600,
+                            maxHeight: 1600,
+                            imageQuality: 85);
+                        if (picked != null)
+                          setM(() => photo = File(picked.path));
+                      },
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Thư viện'),
+                    ),
+                  ),
+                ]),
 
-                  if (photo != null) const SizedBox(height: 8),
+                const SizedBox(height: 12),
 
-                  Row(children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await _picker.pickImage(
-                              source: ImageSource.camera, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
-                          if (picked != null) setM(() => photo = File(picked.path));
+                ElevatedButton.icon(
+                  onPressed: photo == null
+                      ? null
+                      : () async {
+                          final content = presets[selected] == "Khác"
+                              ? (customContent ?? "")
+                              : presets[selected];
+
+                          try {
+                            await _svc.checkinWithPhoto(
+                              packageId: widget.pkg.id,
+                              clientName: content, // <-- giờ truyền nội dung tập
+                              clientPhone: "", // bỏ hoặc thay bằng field khác
+                              photo: photo!,
+                            );
+                            if (mounted) Navigator.pop(context);
+                            if (mounted)
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Điểm danh thành công')));
+                          } catch (e) {
+                            if (mounted)
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Lỗi: $e')));
+                          }
                         },
-                        icon: const Icon(Icons.camera_alt),
-                        label: const Text('Camera'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final picked = await _picker.pickImage(
-                              source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
-                          if (picked != null) setM(() => photo = File(picked.path));
-                        },
-                        icon: const Icon(Icons.photo_library),
-                        label: const Text('Thư viện'),
-                      ),
-                    ),
-                  ]),
-
-                  const SizedBox(height: 12),
-
-                  ElevatedButton.icon(
-                    onPressed: photo == null
-                        ? null
-                        : () async {
-                            final c = clients[selected];
-                            try {
-                              await _svc.checkinWithPhoto(
-                                packageId: widget.pkg.id,
-                                clientName: c.name,
-                                clientPhone: c.phone,
-                                photo: photo!,
-                              );
-                              if (mounted) Navigator.pop(context);
-                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Điểm danh thành công')));
-                            } catch (e) {
-                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
-                            }
-                          },
-                    icon: const Icon(Icons.check),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('Xác nhận'),
-                    ),
-                  )
-                ],
-              ),
+                  icon: const Icon(Icons.check),
+                  label: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12.0),
+                    child: Text('Xác nhận'),
+                  ),
+                )
+              ],
             ),
-          );
-        });
-      },
-    );
-  }
+          ),
+        );
+      });
+    },
+  );
+}
 
   void _openFullScreen(String photoUrl) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => FullScreenImagePage(photoUrl: photoUrl)));
