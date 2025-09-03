@@ -11,7 +11,7 @@ class PackageService {
   CollectionReference get _packagesCol => _db.collection('packages');
   CollectionReference get _attendanceCol => _db.collection('attendance');
 
-  // ---------- Packages ----------
+  // ---------- Packages ----------FirebaseFirestore.instance
   Stream<List<TrainingPackage>> streamPackages() {
     return _packagesCol.orderBy('createdAt', descending: true).snapshots().map(
       (snap) => snap.docs.map((d) => TrainingPackage.fromDoc(d)).toList(),
@@ -95,5 +95,15 @@ class PackageService {
         .snapshots()
         .map((s) => s.docs.map((d) => AttendanceRecord.fromDoc(d)).toList());
   }
-  
+  // trong file service của bạn (PackageService)
+  Stream<TrainingPackage> streamPackageById(String packageId) {
+    return _packagesCol.doc(packageId).snapshots().map((doc) {
+      if (!doc.exists) {
+        // tùy: bạn có thể ném lỗi hoặc trả về TrainingPackage rỗng
+        throw Exception('Package not found');
+      }
+      return TrainingPackage.fromDoc(doc);
+    });
+  }
+
 }

@@ -157,168 +157,173 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.pkg;
     final df = DateFormat('dd/MM/yyyy');
 
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: p.remainingSessions > 0 ? _openCheckinDialog : null,
-        label: const Text('Điểm danh nhanh'),
-        icon: const Icon(Icons.verified_user),
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            expandedHeight: 220,
-            automaticallyImplyLeading: false,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+    return StreamBuilder<TrainingPackage>(
+      stream: _svc.streamPackageById(widget.pkg.id),
+      builder: (context, pkgSnap) {
+        // nếu chưa có data thì show fallback tạm (widget.pkg) hoặc loading
+        final p = pkgSnap.hasData ? pkgSnap.data! : widget.pkg;
+
+        return Scaffold(
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: p.remainingSessions > 0 ? _openCheckinDialog : null,
+            label: const Text('Điểm danh nhanh'),
+            icon: const Icon(Icons.verified_user),
+          ),
+          body: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                pinned: true,
+                expandedHeight: 220,
+                automaticallyImplyLeading: false,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(p.packageName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                                const SizedBox(height: 6),
-                                Text(p.clients.map((e) => e.name).join(' • '), style: const TextStyle(color: Colors.white70)),
-                              ],
-                            ),
-                          ),
-
-                          // Price badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                            child: Text('${NumberFormat.decimalPattern().format(p.price)} đ', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                          )
-                        ],
-                      ),
-                      const Spacer(),
-
-                      // Progress & meta
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Còn ${p.remainingSessions}/${p.totalSessions} buổi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                                const SizedBox(height: 6),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: LinearProgressIndicator(value: p.totalSessions == 0 ? 0 : p.remainingSessions / p.totalSessions, minHeight: 8),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('HSD', style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12)),
-                              const SizedBox(height: 6),
-                              Text(df.format(p.expireDate), style: const TextStyle(color: Colors.white)),
-                            ],
-                          )
-                        ],
-                      )
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // Attendance header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Danh sách điểm danh', style: Theme.of(context).textTheme.titleMedium),
-                  Text('${p.totalSessions - p.remainingSessions} buổi', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54)),],
-              ),
-            ),
-          ),
-
-          // Attendance list (single StreamBuilder)
-          SliverFillRemaining(
-            child: StreamBuilder<List<AttendanceRecord>>(
-              stream: PackageService().streamAttendanceByPackage(p.id),
-              builder: (context, snap) {
-                if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
-                if (!snap.hasData) return const Center(child: CircularProgressIndicator());
-                final list = snap.data!;
-                if (list.isEmpty) return const Center(child: Text('Chưa có điểm danh'));
-
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final a = list[i];
-                    final time = DateFormat('dd/MM HH:mm').format(a.checkinTime.toDate());
-                    return Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 2,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _openFullScreen(a.photoUrl),
-                        child: Padding(
-                          padding: const EdgeInsets.all(10.0),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: a.photoUrl.startsWith('http')
-                                    ? Image.network(a.photoUrl, width: 72, height: 72, fit: BoxFit.cover)
-                                    : Image.file(File(a.photoUrl), width: 72, height: 72, fit: BoxFit.cover),
-                              ),
-                              const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(a.clientName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                                    Text(p.packageName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                                     const SizedBox(height: 6),
-                                    Text(time, style: const TextStyle(color: Colors.black54)),
+                                    Text(p.clients.map((e) => e.name).join(' • '), style: const TextStyle(color: Colors.white70)),
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                onPressed: () => _openFullScreen(a.photoUrl),
-                                icon: const Icon(Icons.fullscreen),
-                                tooltip: 'Xem lớn',
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                                child: Text('${NumberFormat.decimalPattern().format(p.price)} đ', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                               )
                             ],
                           ),
-                        ),
+                          const Spacer(),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Còn ${p.remainingSessions}/${p.totalSessions} buổi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                    const SizedBox(height: 6),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: LinearProgressIndicator(value: p.totalSessions == 0 ? 0 : p.remainingSessions / p.totalSessions, minHeight: 8),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text('HSD', style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12)),
+                                  const SizedBox(height: 6),
+                                  Text(df.format(p.expireDate), style: const TextStyle(color: Colors.white)),
+                                ],
+                              )
+                            ],
+                          )
+                        ],
                       ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Attendance header (bây giờ sẽ cập nhật khi package thay đổi)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Danh sách điểm danh', style: Theme.of(context).textTheme.titleMedium),
+                      // số buổi đã dùng = total - remaining
+                      Text('${p.totalSessions - p.remainingSessions} buổi', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54)),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Attendance list (giữ StreamBuilder attendance hiện tại)
+              SliverFillRemaining(
+                child: StreamBuilder<List<AttendanceRecord>>(
+                  stream: _svc.streamAttendanceByPackage(p.id),
+                  builder: (context, snap) {
+                    if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
+                    if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+                    final list = snap.data!;
+                    if (list.isEmpty) return const Center(child: Text('Chưa có điểm danh'));
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, i) {
+                        final a = list[i];
+                        final time = DateFormat('dd/MM HH:mm').format(a.checkinTime.toDate());
+                        return Card(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => _openFullScreen(a.photoUrl),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10.0),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: a.photoUrl.startsWith('http')
+                                        ? Image.network(a.photoUrl, width: 72, height: 72, fit: BoxFit.cover)
+                                        : Image.file(File(a.photoUrl), width: 72, height: 72, fit: BoxFit.cover),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(a.clientName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                                        const SizedBox(height: 6),
+                                        Text(time, style: const TextStyle(color: Colors.black54)),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    onPressed: () => _openFullScreen(a.photoUrl),
+                                    icon: const Icon(Icons.fullscreen),
+                                    tooltip: 'Xem lớn',
+                                  )
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
-          )
-        ],
-      ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
