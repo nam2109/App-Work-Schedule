@@ -12,6 +12,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../models/training_package.dart';
 import '../../models/attendance.dart';
 import '../../services/package_service.dart';
+import '../students/student_detail_screen.dart';
+
 
 /// Redesigned PackageDetailScreen
 /// - Uses a SliverAppBar with attractive header
@@ -31,6 +33,14 @@ class PackageDetailScreen extends StatefulWidget {
 class _PackageDetailScreenState extends State<PackageDetailScreen> {
   final _svc = PackageService();
   final _picker = ImagePicker();
+  String getLastTwoWords(String fullName) {
+    if (fullName.trim().isEmpty) return "";
+    final parts = fullName.trim().split(" ");
+    if (parts.length >= 2) {
+      return "${parts[parts.length - 2]} ${parts.last}";
+    }
+    return parts.last;
+  }
 
   @override
   void didChangeDependencies() {
@@ -238,7 +248,53 @@ Future<void> _openCheckinDialog() async {
                                   children: [
                                     Text(p.packageName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
                                     const SizedBox(height: 6),
-                                    Text(p.clients.map((e) => e.name).join(' • '), style: const TextStyle(color: Colors.white70)),
+Wrap(
+  spacing: 12,   // khoảng cách ngang giữa các khách
+  runSpacing: 8, // khoảng cách dọc khi xuống dòng
+  alignment: WrapAlignment.start,
+  children: p.clients.map((c) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StudentDetailScreen(
+              studentId: c.phone,
+              studentName: c.name,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              radius: 12,
+              backgroundColor: Colors.white.withOpacity(0.25),
+              child: const Icon(Icons.person, size: 14, color: Colors.white),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              getLastTwoWords(c.name),
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }).toList(),
+)
+
                                   ],
                                 ),
                               ),
