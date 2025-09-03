@@ -419,13 +419,24 @@ class CompareMeasurementScreen extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Text('Cũ', style: TextStyle(fontWeight: FontWeight.w600)),
+                              const Text('Cũ', style: TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
                               const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: oldM.localImages.map((p) => Image.file(File(p), width: 100, height: 100, fit: BoxFit.cover)).toList(),
+                              Column(
+                                children: oldM.localImages.map((p) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(
+                                        File(p),
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ],
                           ),
@@ -433,13 +444,24 @@ class CompareMeasurementScreen extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Text('Mới', style: TextStyle(fontWeight: FontWeight.w600)),
+                              const Text('Mới', style: TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
                               const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                children: newM.localImages.map((p) => Image.file(File(p), width: 100, height: 100, fit: BoxFit.cover)).toList(),
+                              Column(
+                                children: newM.localImages.map((p) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(
+                                        File(p),
+                                        width: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ],
                           ),

@@ -50,14 +50,21 @@ class MeasurementDetailScreen extends StatelessWidget {
                   children: [
                     const Text('Ảnh body:', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    Column(
                       children: measurement.localImages.map((path) {
-                        return Image.file(File(path), width: 100, height: 100, fit: BoxFit.cover);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.file(
+                              File(path),
+                              width: double.infinity,
+                              fit: BoxFit.cover, // tự co dãn chiều cao theo tỉ lệ
+                            ),
+                          ),
+                        );
                       }).toList(),
                     ),
-                    const SizedBox(height: 12),
                   ],
                 ),
               if (measurement.note != null && measurement.note!.isNotEmpty)
