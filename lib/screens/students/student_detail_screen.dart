@@ -17,7 +17,7 @@ class StudentDetailScreen extends StatefulWidget {
 
 class _StudentDetailScreenState extends State<StudentDetailScreen> {
   final _fs = StudentService();
-  final DateFormat df = DateFormat('dd/MM/yyyy HH:mm');
+  final DateFormat df = DateFormat('dd/MM/yyyy');
 
   // selected measurements map: id -> Measurement
   final Map<String, Measurement> _selected = {};
@@ -179,7 +179,7 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
 
   // --- Mục mới: ngày giờ có thể chọn ---
   DateTime _selectedDate = DateTime.now();
-  final DateFormat _df = DateFormat('dd/MM/yyyy HH:mm');
+  final DateFormat _df = DateFormat('dd/MM/yyyy');
 
   @override
   void dispose() {
@@ -213,14 +213,8 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
     );
     if (date == null) return;
 
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_selectedDate),
-    );
-    if (time == null) return;
-
     setState(() {
-      _selectedDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      _selectedDate = DateTime(date.year, date.month, date.day);
     });
   }
 

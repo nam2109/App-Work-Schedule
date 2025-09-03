@@ -214,6 +214,7 @@ class _PackageListScreenState extends State<PackageListScreen> {
                               return p.packageName.toLowerCase().contains(_query) || names.contains(_query);
                             })
                             .toList();
+                        packages.sort((a, b) => a.packageName.toLowerCase().compareTo(b.packageName.toLowerCase()));
 
                         if (packages.isEmpty) {
                           return const Center(child: Text('Chưa có gói tập'));
@@ -626,7 +627,6 @@ class _PackageCard extends StatelessWidget {
                 Expanded(
                   child: Text(pkg.packageName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 ),
-                Text('${currency.format(pkg.price)} đ', style: const TextStyle(fontWeight: FontWeight.w600)),
               ],
             ),
             const SizedBox(height: 6),
