@@ -101,4 +101,18 @@ Future<void> addMeasurement(
         .snapshots()
         .map((snap) => snap.docs.map((d) => Measurement.fromDoc(d)).toList());
   }
+
+  Future<void> upsertStudentByNameAndPhone(String name, String phone) async {
+    final query = await _studentsCol.where('name', isEqualTo: name).get();
+    if (query.docs.isNotEmpty) {
+      // update nếu trùng tên
+      await query.docs.first.reference.update({'phone': phone});
+    } else {
+      await _studentsCol.add({
+        'name': name,
+        'phone': phone,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+  }
 }

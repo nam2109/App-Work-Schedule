@@ -1,10 +1,10 @@
+// lib/screens/student_list_screen.dart
 import 'package:flutter/material.dart';
 import '../../services/student_service.dart';
-import '../../models/student.dart'; // file bạn tạo ở bước 1
+import '../../models/student.dart';
 import 'student_detail_screen.dart';
 
 class StudentListScreen extends StatefulWidget {
-  // optional: list tên học viên được truyền từ trang tạo gói
   final List<String>? initialNames;
 
   const StudentListScreen({Key? key, this.initialNames}) : super(key: key);
@@ -26,10 +26,62 @@ class _StudentListScreenState extends State<StudentListScreen> {
     final names = widget.initialNames ?? [];
     for (final name in names) {
       if (name.trim().isEmpty) continue;
-      // upsert theo tên (nếu chưa có thì tạo)
       await _fs.upsertStudentByName(name.trim());
     }
-    // không cần setState vì stream sẽ cập nhật
+  }
+
+  Future<void> _showAddStudentDialog() async {
+    final nameCtrl = TextEditingController();
+    final phoneCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Thêm học viên"),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: "Tên học viên"),
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? "Nhập tên" : null,
+                ),
+                TextFormField(
+                  controller: phoneCtrl,
+                  decoration: const InputDecoration(labelText: "Số điện thoại"),
+                  keyboardType: TextInputType.phone,
+                  validator: (v) =>
+                      v == null || v.trim().isEmpty ? "Nhập số điện thoại" : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Hủy"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (formKey.currentState!.validate()) {
+                  await _fs.upsertStudentByNameAndPhone(
+                    nameCtrl.text.trim(),
+                    phoneCtrl.text.trim(),
+                  );
+                  Navigator.pop(ctx);
+                }
+              },
+              child: const Text("Lưu"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -56,14 +108,25 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 subtitle: Text(s.phone ?? ''),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => StudentDetailScreen(studentId: s.id, studentName: s.name)));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StudentDetailScreen(
+                        studentId: s.id,
+                        studentName: s.name,
+                      ),
+                    ),
+                  );
                 },
               );
             },
           );
         },
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddStudentDialog,
+        child: const Icon(Icons.add),
+      ),
     );
   }
-
 }

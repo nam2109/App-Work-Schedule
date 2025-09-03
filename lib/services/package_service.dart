@@ -105,5 +105,5 @@ class PackageService {
       return TrainingPackage.fromDoc(doc);
     });
   }
-
+  
 }

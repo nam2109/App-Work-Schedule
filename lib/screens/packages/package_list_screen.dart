@@ -311,36 +311,71 @@ class _PackageAddModalState extends State<_PackageAddModal> {
     if (picked != null && mounted) setState(() => _expire = picked);
   }
 
-  Future<void> _submit() async {
-    if (!_addFormKey.currentState!.validate()) return;
+Future<void> _submit() async {
+  if (!_addFormKey.currentState!.validate()) return;
 
-    final clients = List.generate(_pair, (i) => PackageClient(
-      name: _clientCtrls[i].text.trim(),
-      phone: _phoneCtrls[i].text.trim(),
-    ));
+  final clients = List.generate(_pair, (i) => PackageClient(
+    name: _clientCtrls[i].text.trim(),
+    phone: _phoneCtrls[i].text.trim(),
+  ));
 
-    final pkg = TrainingPackage(
-      id: '',
-      packageName: _nameCtrl.text.trim(),
-      clients: clients,
-      totalSessions: _total,
-      remainingSessions: _total,
-      price: _price,
-      expireDate: _expire,
-      createdAt: Timestamp.now(),
-    );
+  final pkg = TrainingPackage(
+    id: '',
+    packageName: _nameCtrl.text.trim(),
+    clients: clients,
+    totalSessions: _total,
+    remainingSessions: _total,
+    price: _price,
+    expireDate: _expire,
+    createdAt: Timestamp.now(),
+  );
 
-    try {
-      await service.createPackage(pkg);
-      if (!mounted) return;
-      // close modal and notify parent (return true)
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi khi tạo gói: $e')));
+  try {
+    // 1) tạo package
+    await service.createPackage(pkg);
+
+    // 2) thêm học viên mới (nếu chưa có) vào Firestore
+    final studentsCol = FirebaseFirestore.instance.collection('students');
+    for (var c in clients) {
+      final phone = c.phone.trim();
+      final name = c.name.trim();
+
+      if (phone.isEmpty && name.isEmpty) continue;
+
+      if (phone.isNotEmpty) {
+        final q = await studentsCol.where('phone', isEqualTo: phone).limit(1).get();
+        if (q.docs.isNotEmpty) {
+          // update tên nếu cần
+          final doc = q.docs.first;
+          if ((doc['name'] ?? '').toString().isEmpty && name.isNotEmpty) {
+            await studentsCol.doc(doc.id).update({'name': name});
+          }
+          continue;
+        }
       }
+
+      await studentsCol.add({
+        'name': name,
+        'phone': phone,
+        'createdAt': Timestamp.now(),
+      });
+    }
+
+    if (!mounted) return;
+
+    // 3) đóng modal rồi mở trang danh sách học viên
+    Navigator.of(context).pop(true);
+    Future.microtask(() {
+      Navigator.of(context).pushNamed('/students');
+    });
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi tạo gói hoặc học viên: $e')),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {

@@ -177,6 +177,10 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
   final List<File?> _images = List.generate(4, (_) => null);
   final ImagePicker _picker = ImagePicker();
 
+  // --- Mục mới: ngày giờ có thể chọn ---
+  DateTime _selectedDate = DateTime.now();
+  final DateFormat _df = DateFormat('dd/MM/yyyy HH:mm');
+
   @override
   void dispose() {
     _weightCtrl.dispose();
@@ -198,6 +202,26 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
     if (picked != null) {
       setState(() => _images[index] = File(picked.path));
     }
+  }
+
+  Future<void> _pickDateTime() async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (date == null) return;
+
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_selectedDate),
+    );
+    if (time == null) return;
+
+    setState(() {
+      _selectedDate = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    });
   }
 
   Future<void> _addMeasurement() async {
@@ -223,12 +247,21 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
       chest: double.tryParse(_chestCtrl.text.trim()) ?? 0,
       localImages: _images.whereType<File>().map((f) => f.path).toList(),
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-      createdAt: DateTime.now(),
+      createdAt: _selectedDate, // <-- dùng ngày đã chọn
     );
 
-    await _fs.addFullMeasurement(widget.studentId, measurement);
-    widget.onSaved();
-    Navigator.pop(context);
+    Navigator.pop(context); // đóng ngay lập tức
+
+    // lưu async phía sau
+    _fs.addFullMeasurement(widget.studentId, measurement).then((_) {
+      widget.onSaved();
+    }).catchError((e) {
+      // báo lỗi bằng SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi lưu: $e')),
+      );
+    });
+
   }
 
   Widget _buildTextField(String label, TextEditingController ctrl) {
@@ -245,7 +278,22 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
       title: const Text('Thêm số đo mới'),
       content: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Hiển thị và chọn ngày giờ
+            Text('Ngày đo', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(child: Text(_df.format(_selectedDate))),
+                TextButton(
+                  onPressed: _pickDateTime,
+                  child: const Text('Chọn'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
             _buildTextField('Cân nặng (kg)', _weightCtrl),
             _buildTextField('Chiều cao (cm)', _heightCtrl),
             _buildTextField('Vai (cm)', _shoulderCtrl),
@@ -283,6 +331,7 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
     );
   }
 }
+
 
 /// Screen so sánh 2 lần đo
 class CompareMeasurementScreen extends StatelessWidget {
