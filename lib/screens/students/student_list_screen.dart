@@ -1,6 +1,4 @@
-// File: lib/screens/students/student_list_screen.dart
-// Thay thế file hiện tại bằng file này hoặc lưu thành student_list_screen_redesign.dart
-
+// lib/screens/students/student_list_screen.dart
 import 'package:flutter/material.dart';
 import '../../services/student_service.dart';
 import '../../models/student.dart';
@@ -111,10 +109,53 @@ class _StudentListScreenState extends State<StudentListScreen> {
     final crossAxisCount = size.width > 900 ? 3 : (size.width > 600 ? 2 : 1);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddStudentDialog,
-        child: const Icon(Icons.add),
+      extendBodyBehindAppBar: true,
+      // AppBar đồng bộ với các màn khác (icon + title, trong suốt, bỏ back)
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Row(
+          children: const [
+            Icon(Icons.group, color: Colors.white, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Học viên',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: false,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: CircleAvatar(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              child: const Icon(Icons.person, color: Colors.black87),
+            ),
+          ),
+        ],
       ),
+
+      // FloatingActionButton: gradient circular để đồng bộ style
+      floatingActionButton: GestureDetector(
+        onTap: _showAddStudentDialog,
+        child: Container(
+          height: 56,
+          width: 56,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF00C6FF), Color(0xFF0072FF)]),
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 6))],
+          ),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ),
+
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -125,10 +166,10 @@ class _StudentListScreenState extends State<StudentListScreen> {
             colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
           ),
         ),
+        // push content below AppBar
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            // StreamBuilder bọc phần nội dung chính để có access tới students
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: StreamBuilder<List<Student>>(
               stream: _fs.streamStudents(),
               builder: (context, snapshot) {
@@ -142,46 +183,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header (bây giờ có thể dùng students.length)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text('Học viên',
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold)),
-                              SizedBox(height: 6),
-                              Text('Danh sách khách hàng của bạn',
-                                  style: TextStyle(color: Colors.white70)),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('Tổng',
-                                  style: TextStyle(color: Colors.white70, fontSize: 12)),
-                              const SizedBox(height: 2),
-                              Text(
-                                students.length.toString(),
-                                style: const TextStyle(
-                                    color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
+                    // subtitle / small description
+                    Text('Danh sách khách hàng của bạn', style: TextStyle(color: Colors.white70)),
+
                     const SizedBox(height: 12),
 
                     // Search bar
@@ -199,7 +203,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
                             child: TextField(
                               controller: _searchCtrl,
                               style: const TextStyle(color: Colors.white),
-                              onChanged: (_) => setState(() {}),
+                              onChanged: (_) {
+                                setState(() {}); // chỉ rebuild khi text thay đổi
+                              },
                               decoration: const InputDecoration(
                                 hintText: 'Tìm: tên hoặc số điện thoại',
                                 hintStyle: TextStyle(color: Colors.white70),
@@ -235,11 +241,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.group_off,
-                                        size: 64, color: Colors.grey.shade300),
+                                    Icon(Icons.group_off, size: 64, color: Colors.grey.shade300),
                                     const SizedBox(height: 12),
-                                    const Text('Chưa có học viên nào',
-                                        style: TextStyle(fontSize: 16)),
+                                    const Text('Chưa có học viên nào', style: TextStyle(fontSize: 16)),
                                     const SizedBox(height: 8),
                                     ElevatedButton(
                                       onPressed: _showAddStudentDialog,
@@ -253,8 +257,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                     onRefresh: () async => setState(() {}),
                                     child: ListView.separated(
                                       itemCount: filtered.length,
-                                      separatorBuilder: (_, __) =>
-                                          const Divider(height: 1),
+                                      separatorBuilder: (_, __) => const Divider(height: 1),
                                       itemBuilder: (context, i) {
                                         final s = filtered[i];
                                         return _buildStudentCard(s);
@@ -262,16 +265,14 @@ class _StudentListScreenState extends State<StudentListScreen> {
                                     ),
                                   )
                                 : GridView.builder(
-                                    gridDelegate:
-                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                                       crossAxisCount: crossAxisCount,
                                       crossAxisSpacing: 12,
                                       mainAxisSpacing: 12,
                                       childAspectRatio: 3,
                                     ),
                                     itemCount: filtered.length,
-                                    itemBuilder: (context, i) =>
-                                        _buildStudentCard(filtered[i]),
+                                    itemBuilder: (context, i) => _buildStudentCard(filtered[i]),
                                   )),
                       ),
                     ),
@@ -325,6 +326,42 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
             ),
             const Icon(Icons.chevron_right, color: Colors.black38),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Reusable mini stat card (style aligned with other screens)
+class _MiniStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  const _MiniStatCard({Key? key, required this.title, required this.value}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            const SizedBox(height: 6),
+            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
       ),

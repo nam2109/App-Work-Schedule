@@ -65,6 +65,53 @@ class _PackageListScreenState extends State<PackageListScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       extendBodyBehindAppBar: true,
+      // AppBar đồng bộ: icon + title, trong suốt, bỏ nút back
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Row(
+          children: const [
+            Icon(Icons.fitness_center, color: Colors.white, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Gói tập',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: false,
+        actions: [
+          IconButton(
+            tooltip: 'Lịch sử gói',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PackageHistoryScreen()),
+              );
+            },
+            icon: Container(
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              padding: const EdgeInsets.all(8),
+              child: const Icon(Icons.history, color: Colors.white, size: 20),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: CircleAvatar(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              child: const Icon(Icons.person, color: Colors.black87),
+            ),
+          )
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddModal,
         label: const Text('Thêm gói'),
@@ -80,77 +127,59 @@ class _PackageListScreenState extends State<PackageListScreen> {
             colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
           ),
         ),
+        // Đẩy nội dung xuống dưới AppBar
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+            padding: EdgeInsets.fromLTRB(12, 12, 12, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header + search
+                // Subtitle + search
+                Text('Quản lý gói & điểm danh',
+                    style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Gói tập',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
+                      child: SizedBox(
+                        height: 42,
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.12),
+                            hintText: 'Tìm theo tên gói hoặc khách...',
+                            prefixIcon: const Icon(Icons.search, color: Colors.white70),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
                             ),
+                            hintStyle: const TextStyle(color: Colors.white70),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
                           ),
-                          const SizedBox(height: 6),
-                          const Text('Quản lý gói & điểm danh', style: TextStyle(color: Colors.white70)),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            height: 40,
-                            child: TextField(
-                              controller: _searchController,
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: Colors.white.withOpacity(0.12),
-                                hintText: 'Tìm theo tên gói hoặc khách...',
-                                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                                hintStyle: const TextStyle(color: Colors.white70),
-                              ),
-                              style: const TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ],
+                          style: const TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Lịch sử gói',
-                          icon: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            padding: const EdgeInsets.all(6),
-                            child: const Icon(Icons.history, color: Colors.white),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const PackageHistoryScreen()),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 6),
-                        CircleAvatar(
-                          backgroundColor: Colors.white.withOpacity(0.9),
-                          child: const Icon(Icons.fitness_center, color: Colors.black87),
-                        ),
-                      ],
+                    const SizedBox(width: 12),
+                    // Quick filter button (keeps UI consistent)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: IconButton(
+                        tooltip: 'Bộ lọc',
+                        onPressed: () {
+                          // placeholder: bạn có thể mở filter modal ở đây
+                        },
+                        icon: const Icon(Icons.filter_list, color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+
+                const SizedBox(height: 16),
 
                 // Summary cards (computed from stream)
                 StreamBuilder<List<TrainingPackage>>(
@@ -172,9 +201,9 @@ class _PackageListScreenState extends State<PackageListScreen> {
                     int totalRemaining = 0;
 
                     for (var p in all) {
-                      if (p.remainingSessions > 0) {
+                      if ((p.remainingSessions ?? 0) > 0) {
                         numberOfCases++;
-                        totalRemaining += p.remainingSessions;
+                        totalRemaining += (p.remainingSessions ?? 0);
                         for (var c in p.clients) {
                           uniqueClients.add(c.name);
                         }
@@ -183,7 +212,9 @@ class _PackageListScreenState extends State<PackageListScreen> {
                     return Row(
                       children: [
                         _MiniStatCard(title: 'Khách', value: uniqueClients.length.toString()),
+                        const SizedBox(width: 8),
                         _MiniStatCard(title: 'Buổi còn', value: totalRemaining.toString()),
+                        const SizedBox(width: 8),
                         _MiniStatCard(title: 'Gói tập', value: numberOfCases.toString()),
                       ],
                     );
@@ -192,7 +223,7 @@ class _PackageListScreenState extends State<PackageListScreen> {
 
                 const SizedBox(height: 16),
 
-                // White content panel with list only (form is modal)
+                // White content panel with list/grid
                 Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(12),
@@ -207,14 +238,14 @@ class _PackageListScreenState extends State<PackageListScreen> {
                         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
 
                         final packages = snap.data!
-                            .where((p) => p.remainingSessions > 0)
+                            .where((p) => (p.remainingSessions ?? 0) > 0)
                             .where((p) {
                               if (_query.isEmpty) return true;
                               final names = p.clients.map((c) => c.name).join(' ').toLowerCase();
-                              return p.packageName.toLowerCase().contains(_query) || names.contains(_query);
+                              return (p.packageName ?? '').toLowerCase().contains(_query) || names.contains(_query);
                             })
                             .toList();
-                        packages.sort((a, b) => a.packageName.toLowerCase().compareTo(b.packageName.toLowerCase()));
+                        packages.sort((a, b) => (a.packageName ?? '').toLowerCase().compareTo((b.packageName ?? '').toLowerCase()));
 
                         if (packages.isEmpty) {
                           return const Center(child: Text('Chưa có gói tập'));
@@ -275,7 +306,6 @@ class _PackageAddModalState extends State<_PackageAddModal> {
   final _phoneCtrls = <TextEditingController>[];
   final service = PackageService();
 
-  // New controllers for numeric fields (easier to style and control)
   late final TextEditingController _totalCtrl;
   late final TextEditingController _priceCtrl;
 
@@ -449,7 +479,6 @@ class _PackageAddModalState extends State<_PackageAddModal> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Form card
                       Card(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         elevation: 2,
@@ -599,7 +628,7 @@ class _MiniStatCard extends StatelessWidget {
       ),
     );
   }
-}   
+}
 
 class _PackageCard extends StatelessWidget {
   final TrainingPackage pkg;
@@ -608,11 +637,11 @@ class _PackageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final remain = pkg.remainingSessions;
-    final total = pkg.totalSessions;
+    final remain = pkg.remainingSessions ?? 0;
+    final total = pkg.totalSessions ?? 0;
     final ratio = total == 0 ? 0.0 : remain / total;
     final names = pkg.clients.map((c) => c.name).join(' • ');
-    final expire = DateFormat('dd/MM/yyyy').format(pkg.expireDate);
+    final expire = pkg.expireDate != null ? DateFormat('dd/MM/yyyy').format(pkg.expireDate!) : '-';
 
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -625,7 +654,7 @@ class _PackageCard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(pkg.packageName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  child: Text(pkg.packageName ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 ),
               ],
             ),

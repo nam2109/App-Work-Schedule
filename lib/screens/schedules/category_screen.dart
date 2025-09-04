@@ -15,11 +15,34 @@ class CategoryScreen extends ConsumerWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Danh mục', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: Colors.white)),
-        centerTitle: true,
-        automaticallyImplyLeading: true,
+        title: Row(
+          children: const [
+            Icon(Icons.folder, color: Colors.white, size: 24),
+            SizedBox(width: 8),
+            Text(
+              'Danh mục',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: false,
+        actions: [
+
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: CircleAvatar(
+              backgroundColor: Colors.white.withOpacity(0.9),
+              child: const Icon(Icons.person, color: Colors.black87),
+            ),
+          ),
+        ],
       ),
       body: Container(
         width: double.infinity,
@@ -40,17 +63,6 @@ class CategoryScreen extends ConsumerWidget {
                 // Header with subtitle
                 const SizedBox(height: 6),
                 Text('Tổ chức lịch & điểm danh', style: GoogleFonts.roboto(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 12),
-
-                // Search bar
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.white.withOpacity(0.06)),
-                  ),
-                ),
 
                 const SizedBox(height: 16),
 
