@@ -51,6 +51,7 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
     int selected = 0;
     String? customContent;
     File? photo;
+    bool submitting = false;
 
     await showModalBottomSheet(
       context: context,
@@ -155,9 +156,10 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                   const SizedBox(height: 12),
 
                   ElevatedButton.icon(
-                    onPressed: photo == null
+                    onPressed: photo == null || submitting
                         ? null
                         : () async {
+                            setM(() => submitting = true);
                             final content = presets[selected] == "Khác"
                                 ? (customContent ?? "")
                                 : presets[selected];
@@ -165,25 +167,34 @@ class _PackageDetailScreenState extends State<PackageDetailScreen> {
                             try {
                               await _svc.checkinWithPhoto(
                                 packageId: widget.pkg.id,
-                                clientName: content, // <-- giờ truyền nội dung tập
-                                clientPhone: "", // bỏ hoặc thay bằng field khác
+                                clientName: content,
+                                clientPhone: "",
                                 photo: photo!,
                               );
                               if (mounted) Navigator.pop(context);
-                              if (mounted)
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('Điểm danh thành công')));
+                                  const SnackBar(content: Text('Điểm danh thành công'))
+                                );
+                              }
                             } catch (e) {
-                              if (mounted)
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Lỗi: $e')));
+                                  SnackBar(content: Text('Lỗi: $e'))
+                                );
+                              }
+                            } finally {
+                              if (mounted) setM(() => submitting = false);
                             }
                           },
-                    icon: const Icon(Icons.check),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 12.0),
-                      child: Text('Xác nhận'),
+                    icon: submitting
+                        ? const SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check),
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Text(submitting ? 'Đang lưu...' : 'Xác nhận'),
                     ),
                   )
                 ],
