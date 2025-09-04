@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:work_schedule_app/screens/statistics/package_revenue_stats_screen.dart';
 import 'package:work_schedule_app/screens/students/student_list_screen.dart';
 import './packages/package_list_screen.dart';
-import 'category_screen.dart';
+import 'schedules/category_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);

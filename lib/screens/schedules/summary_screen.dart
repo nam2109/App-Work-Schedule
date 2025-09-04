@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/schedule.dart';
+import '../../models/schedule.dart';
 import 'schedule_detail_screen.dart';
-import '../providers/schedule_provider.dart'; // Import provider
+import '../../providers/schedule_provider.dart'; // Import provider
 
 class SummaryScreen extends ConsumerWidget {
   final Category category;

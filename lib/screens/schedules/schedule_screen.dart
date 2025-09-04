@@ -2,8 +2,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/schedule.dart';
-import '../providers/schedule_provider.dart';
+import '../../models/schedule.dart';
+import '../../providers/schedule_provider.dart';
 import 'schedule_detail_screen.dart';
 import 'summary_screen.dart';
 
