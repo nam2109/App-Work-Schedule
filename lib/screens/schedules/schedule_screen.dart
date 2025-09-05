@@ -16,6 +16,7 @@ class ScheduleScreen extends ConsumerWidget {
     final tables = ref.watch(scheduleProvider(category));
     final notifier = ref.read(scheduleProvider(category).notifier);
     final nameController = TextEditingController();
+    final loading = ref.watch(syncLoadingProvider);
 
     Color getRandomColor() {
       final usedValues = tables.map((e) => e.color.value).toSet();
@@ -140,7 +141,7 @@ class ScheduleScreen extends ConsumerWidget {
                       icon: const Icon(Icons.check),
                       label: const Text(
                         'Tạo bảng',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16), 
                       ),
                     ),
                   )
@@ -258,51 +259,142 @@ class ScheduleScreen extends ConsumerWidget {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F6F6),
-        appBar: AppBar(
-          title: Text('${category.name}', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
-          backgroundColor: Colors.deepPurple,
-          elevation: 0,
-          leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: _finishAndReturn),
-          actions: [
-            Consumer(builder: (context, ref, _) {
-              final loading = ref.watch(syncLoadingProvider);
-              return loading
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(140),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, left: 16, right: 16, bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // nicer back button
+                      Material(
+                        color: Colors.white.withOpacity(0.12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        child: InkWell(
+                          onTap: _finishAndReturn,
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            child: const Icon(Icons.arrow_back, color: Colors.white),
+                          ),
+                        ),
                       ),
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.sync, color: Colors.white),
-                      onPressed: () async {
-                        ref.read(syncLoadingProvider.notifier).state = true;
-                        final message = await notifier.syncWithFirebase();
-                        ref.read(syncLoadingProvider.notifier).state = false;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(message)),
-                        );
-                      },
-                    );
-            }),
-            IconButton(
-              icon: const Icon(Icons.table_chart, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => SummaryScreen(category: category)),
-                );
-              },
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              category.name,
+                              style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              tables.isEmpty ? 'Chưa có bảng nào' : '${tables.length} bảng',
+                              style: GoogleFonts.roboto(color: Colors.white70, fontSize: 13),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // sync / loading indicator
+                      if (loading)
+                        const SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        ),
+
+                      if (!loading)
+                        IconButton(
+                          icon: const Icon(Icons.sync, color: Colors.white),
+                          onPressed: () async {
+                            ref.read(syncLoadingProvider.notifier).state = true;
+                            final message = await notifier.syncWithFirebase();
+                            ref.read(syncLoadingProvider.notifier).state = false;
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                          },
+                          tooltip: 'Đồng bộ',
+                        ),
+
+                      IconButton(
+                        icon: const Icon(Icons.table_chart, color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => SummaryScreen(category: category)),
+                          );
+                        },
+                        tooltip: 'Tóm tắt',
+                      ),
+
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Search box inside AppBar
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2)),
+                            ],
+                          ),
+                          child: TextField(
+                            onChanged: (q) {
+                              // optional: implement search/filter in provider
+                            },
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search),
+                              hintText: 'Tìm bảng hoặc ghi chú...',
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      FloatingActionButton(
+                        mini: true,
+                        backgroundColor: Colors.white,
+                        heroTag: 'add_table_fab',
+                        onPressed: _showAddTableDialog,
+                        child: const Icon(Icons.add, color: Colors.deepPurple),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16),
           child: tables.isEmpty
               ? Center(
                   child: Text(
+                    
                     'Chưa có bảng nào.\nNhấn nút + để tạo mới',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
@@ -379,11 +471,6 @@ class ScheduleScreen extends ConsumerWidget {
                     );
                   },
                 ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showAddTableDialog,
-          backgroundColor: Colors.deepPurple,
-          child: const Icon(Icons.add),
         ),
       ),
     );

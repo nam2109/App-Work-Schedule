@@ -17,74 +17,124 @@ class StudentDetailScreen extends StatefulWidget {
 
 class _StudentDetailScreenState extends State<StudentDetailScreen> {
   final _fs = StudentService();
-  final DateFormat df = DateFormat('dd/MM/yyyy');
+  final DateFormat dfShort = DateFormat('dd/MM/yyyy');
+  final DateFormat dfFull = DateFormat('dd/MM/yyyy');
 
-  // selected measurements map: id -> Measurement
+  // selected measurements: id -> Measurement
   final Map<String, Measurement> _selected = {};
 
-  void _openAddMeasurementDialog() {
-    showDialog(
+  void _openAddMeasurementSheet() {
+    showModalBottomSheet<bool?>(
       context: context,
-      builder: (_) => AddMeasurementDialog(
-        studentId: widget.studentId,
-        onSaved: () {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã lưu số đo')));
-        },
-      ),
-    );
-  }
-
-  void _toggleSelect(Measurement m) {
-    setState(() {
-      if (_selected.containsKey(m.id)) {
-        _selected.remove(m.id);
-      } else {
-        if (_selected.length < 2) {
-          _selected[m.id] = m;
-        } else {
-          // nếu đã chọn 2, thay 1 (hành vi này là tùy ý — mình thông báo)
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Chỉ được chọn tối đa 2 lần đo để so sánh')));
-        }
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return FractionallySizedBox(
+          heightFactor: 0.95,
+          child: AddMeasurementSheet(
+            studentId: widget.studentId,
+            onSaved: () {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã lưu số đo')));
+            },
+          ),
+        );
+      },
+    ).then((saved) {
+      if (saved == true) {
+        // optionally refresh handled by stream
       }
     });
   }
 
-  void _openCompare() {
-    if (_selected.length != 2) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Hãy chọn đúng 2 lần đo để so sánh')));
-      return;
+void _toggleSelect(Measurement m) {
+  setState(() {
+    if (_selected.containsKey(m.id)) {
+      _selected.remove(m.id);
+    } else {
+      if (_selected.length < 2) {
+        _selected[m.id] = m;
+        // 👉 nếu sau khi chọn đủ 2 thì mở trang so sánh luôn
+        if (_selected.length == 2) {
+          final list = _selected.values.toList();
+          list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CompareMeasurementScreen(
+                  oldM: list[0],
+                  newM: list[1],
+                ),
+              ),
+            ).then((_) {
+              // Sau khi so sánh xong thì clear selection
+              setState(() => _selected.clear());
+            });
+          });
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chỉ được chọn tối đa 2 lần đo để so sánh')),
+        );
+      }
     }
-    final list = _selected.values.toList();
-    // sort by createdAt so older -> newer (tuỳ ý)
-    list.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => CompareMeasurementScreen(oldM: list[0], newM: list[1])),
-    );
-  }
-
+  });
+}
   void _clearSelection() {
     setState(() => _selected.clear());
   }
 
   @override
   Widget build(BuildContext context) {
+    String getShortName(String fullName) {
+      final parts = fullName.trim().split(RegExp(r'\s+'));
+      if (parts.length <= 2) {
+        return fullName; // Nếu chỉ có 1–2 từ thì giữ nguyên
+      }
+      // Lấy 2 chữ cuối
+      return parts.sublist(parts.length - 2).join(' ');
+    }
     return Scaffold(
+      backgroundColor: Colors.white,
+      // remove back button from appbar
       appBar: AppBar(
-        title: Text(widget.studentName),
-        actions: [
-          if (_selected.isNotEmpty)
-            IconButton(
-              tooltip: 'Xoá chọn',
-              icon: const Icon(Icons.clear),
-              onPressed: _clearSelection,
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Row(
+          children: [
+            // avatar placeholder
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(Icons.person, color: Colors.black54),
             ),
-          IconButton(
-            tooltip: 'So sánh (chọn 2)',
-            icon: const Icon(Icons.compare_arrows),
-            onPressed: _selected.length == 2 ? _openCompare : null,
-          ),
-        ],
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(getShortName(widget.studentName), style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text('Quản lý số đo', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                ],
+              ),
+            ),
+            // actions: clear selection & compare
+            if (_selected.isNotEmpty)
+              IconButton(
+                tooltip: 'Xoá chọn',
+                icon: const Icon(Icons.clear, color: Colors.black54),
+                onPressed: _clearSelection,
+              ),
+            ],
+        ),
       ),
       body: StreamBuilder<List<Measurement>>(
         stream: _fs.streamMeasurements(widget.studentId),
@@ -94,74 +144,167 @@ class _StudentDetailScreenState extends State<StudentDetailScreen> {
           }
           final items = snap.data ?? [];
           if (items.isEmpty) {
-            return const Center(child: Text('Chưa có số đo nào'));
+            return _emptyState();
           }
-          return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, i) {
-              final m = items[i];
-              final isSelected = _selected.containsKey(m.id);
-              return Card(
-                color: isSelected ? Colors.blue.shade50 : null,
-                elevation: 2,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(12),
-                  title: Text('Cân nặng: ${m.weight ?? '-'} kg — Chiều cao: ${m.height ?? '-'} cm'),
-                  subtitle: Text('${df.format(m.createdAt)}${m.note != null ? ' — ${m.note}' : ''}'),
-                  trailing: m.localImages.isNotEmpty
-                      ? SizedBox(
-                          width: 50,
-                          child: Image.file(
-                            File(m.localImages.first),
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : null,
-                  isThreeLine: true,
-                  onTap: () {
-                    // nếu đang có selection, tap sẽ toggle chọn
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: ListView.separated(
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final m = items[index];
+                final isSelected = _selected.containsKey(m.id);
+                return MeasurementTile(
+                  measurement: m,
+                  isSelected: isSelected,
+                  onTap: () async {
                     if (_selected.isNotEmpty) {
                       _toggleSelect(m);
                       return;
                     }
-                    // không có selection -> mở chi tiết
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => MeasurementDetailScreen(measurement: m)));
+                    final res = await Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => MeasurementDetailScreen(studentId: widget.studentId, measurement: m)),
+                    );
+                    // Nếu user bấm "So sánh" ở màn hình chi tiết -> nhận payload và bật chế độ chọn
+                    if (res is Map && res['compare'] == true) {
+                      setState(() {
+                        _selected.clear(); // xóa chọn cũ (tuỳ bạn có muốn giữ thì bỏ dòng này)
+                        // nếu measurement object được gửi trong payload dùng nó, nếu không thì dùng m
+                        final Measurement chosen = res['measurement'] ?? m;
+                        _selected[chosen.id] = chosen;
+                      });
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Đã chọn lần đo này — chọn 1 lần đo nữa để so sánh')),
+                      );
+                    }
                   },
-                  onLongPress: () {
-                    // long press để chọn (toggle)
-                    _toggleSelect(m);
-                  },
-                  leading: isSelected ? const Icon(Icons.check_circle, color: Colors.blue) : const SizedBox.shrink(),
-                ),
-              );
-            },
+                  onLongPress: () => _toggleSelect(m),
+                );
+              },
+            ),
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddMeasurementDialog,
-        child: const Icon(Icons.add),
-        tooltip: 'Thêm số đo mới',
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openAddMeasurementSheet,
+        icon: const Icon(Icons.add),
+        label: const Text('Thêm số đo'),
+      ),
+    );
+  }
+
+  Widget _emptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.monitor_weight, size: 88, color: Colors.grey.shade300),
+            const SizedBox(height: 14),
+            Text('Chưa có số đo nào', style: TextStyle(fontSize: 20, color: Colors.grey.shade800, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text('Nhấn nút "Thêm số đo" để lưu lần đo đầu tiên cho học viên.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+            const SizedBox(height: 14),
+            ElevatedButton.icon(onPressed: _openAddMeasurementSheet, icon: const Icon(Icons.add), label: const Text('Thêm số đo')),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Dialog thêm số đo (giữ nguyên như trước)
-class AddMeasurementDialog extends StatefulWidget {
-  final String studentId;
-  final VoidCallback onSaved;
-  const AddMeasurementDialog({super.key, required this.studentId, required this.onSaved});
+/// Compact tile for measurement
+class MeasurementTile extends StatelessWidget {
+  final Measurement measurement;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const MeasurementTile({
+    Key? key,
+    required this.measurement,
+    required this.isSelected,
+    required this.onTap,
+    required this.onLongPress,
+  }) : super(key: key);
+
+  String _brief(Measurement m) {
+    final w = m.weight != null ? '${m.weight!.toStringAsFixed(1)} kg' : '-';
+    final h = m.height != null ? '${m.height!.toStringAsFixed(0)} cm' : '-';
+    return '$w • $h';
+  }
 
   @override
-  State<AddMeasurementDialog> createState() => _AddMeasurementDialogState();
+  Widget build(BuildContext context) {
+    final df = DateFormat('dd/MM/yyyy');
+    final thumb = measurement.localImages.isNotEmpty ? measurement.localImages.first : null;
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: isSelected ? Colors.blue.shade50 : null,
+      child: InkWell(
+        onTap: onTap,
+        onLongPress: onLongPress,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  color: Colors.grey.shade100,
+                  child: thumb != null ? Image.file(File(thumb), fit: BoxFit.cover) : Icon(Icons.person_outline, size: 34, color: Colors.grey.shade400),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_brief(measurement), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Icon(Icons.calendar_today, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 6),
+                    Text(df.format(measurement.createdAt), style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                  ]),
+                  if ((measurement.note ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                      child: Text(measurement.note ?? '', style: const TextStyle(fontSize: 12)),
+                    )
+                  ]
+                ]),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
+/// Full-screen bottom sheet for adding measurement (improved UI)
+class AddMeasurementSheet extends StatefulWidget {
+  final String studentId;
+  final VoidCallback onSaved;
+  const AddMeasurementSheet({Key? key, required this.studentId, required this.onSaved}) : super(key: key);
+
+  @override
+  State<AddMeasurementSheet> createState() => _AddMeasurementSheetState();
+}
+
+class _AddMeasurementSheetState extends State<AddMeasurementSheet> {
   final _fs = StudentService();
 
+  final _formKey = GlobalKey<FormState>();
   final _weightCtrl = TextEditingController();
   final _heightCtrl = TextEditingController();
   final _shoulderCtrl = TextEditingController();
@@ -177,7 +320,6 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
   final List<File?> _images = List.generate(4, (_) => null);
   final ImagePicker _picker = ImagePicker();
 
-  // --- Mục mới: ngày giờ có thể chọn ---
   DateTime _selectedDate = DateTime.now();
   final DateFormat _df = DateFormat('dd/MM/yyyy');
 
@@ -204,21 +346,23 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
     }
   }
 
-  Future<void> _pickDateTime() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (date == null) return;
-
+Future<void> _pickDate() async {
+  final date = await showDatePicker(
+    context: context,
+    initialDate: _selectedDate,
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2100),
+  );
+  if (date != null) {
     setState(() {
-      _selectedDate = DateTime(date.year, date.month, date.day);
+      _selectedDate = DateTime(date.year, date.month, date.day); // chỉ lấy ngày
     });
   }
+}
 
-  Future<void> _addMeasurement() async {
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+
     final weight = double.tryParse(_weightCtrl.text.trim());
     final height = double.tryParse(_heightCtrl.text.trim());
 
@@ -241,93 +385,137 @@ class _AddMeasurementDialogState extends State<AddMeasurementDialog> {
       chest: double.tryParse(_chestCtrl.text.trim()) ?? 0,
       localImages: _images.whereType<File>().map((f) => f.path).toList(),
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-      createdAt: _selectedDate, // <-- dùng ngày đã chọn
+      createdAt: _selectedDate,
     );
 
-    Navigator.pop(context); // đóng ngay lập tức
+    Navigator.pop(context, true);
 
-    // lưu async phía sau
-    _fs.addFullMeasurement(widget.studentId, measurement).then((_) {
+    try {
+      await _fs.addFullMeasurement(widget.studentId, measurement);
       widget.onSaved();
-    }).catchError((e) {
-      // báo lỗi bằng SnackBar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi lưu: $e')),
-      );
-    });
-
+    } catch (e) {
+      // show error
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi khi lưu: $e')));
+    }
   }
 
-  Widget _buildTextField(String label, TextEditingController ctrl) {
+  Widget _numField(String label, TextEditingController ctrl, {String? hint}) {
     return TextFormField(
       controller: ctrl,
-      keyboardType: TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(labelText: label),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      validator: (v) {
+        if ((label == 'Cân nặng (kg)' || label == 'Chiều cao (cm)') && (v == null || v.trim().isEmpty)) {
+          return 'Bắt buộc';
+        }
+        return null;
+      },
+      decoration: InputDecoration(labelText: label, hintText: hint, border: const OutlineInputBorder()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Thêm số đo mới'),
-      content: SingleChildScrollView(
+    return Material(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      child: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hiển thị và chọn ngày giờ
-            Text('Ngày đo', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Expanded(child: Text(_df.format(_selectedDate))),
-                TextButton(
-                  onPressed: _pickDateTime,
-                  child: const Text('Chọn'),
+            // header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), color: Colors.white),
+              child: Row(
+                children: [
+                  const SizedBox(width: 6),
+                  Expanded(child: Text('Thêm số đo', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black87))),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(12),
+                child: Form(
+                  key: _formKey,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Row(
+                      children: [
+                        Expanded(child: Text('Ngày: ${_df.format(_selectedDate)}')),
+                        TextButton.icon(onPressed: _pickDate, icon: const Icon(Icons.date_range), label: const Text('Chọn')),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: _numField('Cân nặng (kg)', _weightCtrl)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _numField('Chiều cao (cm)', _heightCtrl)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(width: 170, child: _numField('Vai (cm)', _shoulderCtrl)),
+                        SizedBox(width: 170, child: _numField('Eo (cm)', _waistCtrl)),
+                        SizedBox(width: 170, child: _numField('Bụng (cm)', _bellyCtrl)),
+                        SizedBox(width: 170, child: _numField('Mông (cm)', _hipCtrl)),
+                        SizedBox(width: 170, child: _numField('Đùi (cm)', _thighCtrl)),
+                        SizedBox(width: 170, child: _numField('Bắp chân (cm)', _calfCtrl)),
+                        SizedBox(width: 170, child: _numField('Bắp tay (cm)', _armCtrl)),
+                        SizedBox(width: 170, child: _numField('Ngực (cm)', _chestCtrl)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Ảnh (tối đa 4)', style: TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      children: List.generate(4, (i) {
+                        final img = _images[i];
+                        return GestureDetector(
+                          onTap: () => _pickImage(i),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              width: 72,
+                              height: 72,
+                              color: Colors.grey.shade100,
+                              child: img != null ? Image.file(img, fit: BoxFit.cover) : Icon(Icons.add_a_photo, size: 28, color: Colors.grey.shade500),
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(controller: _noteCtrl, maxLines: 3, decoration: const InputDecoration(labelText: 'Ghi chú', border: OutlineInputBorder())),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy'))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _save,
+                            child: const Padding(padding: EdgeInsets.symmetric(vertical: 14), child: Text('Lưu', style: TextStyle(fontWeight: FontWeight.bold))),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ]),
                 ),
-              ],
+              ),
             ),
-            const SizedBox(height: 8),
-
-            _buildTextField('Cân nặng (kg)', _weightCtrl),
-            _buildTextField('Chiều cao (cm)', _heightCtrl),
-            _buildTextField('Vai (cm)', _shoulderCtrl),
-            _buildTextField('Eo (cm)', _waistCtrl),
-            _buildTextField('Bụng rốn (cm)', _bellyCtrl),
-            _buildTextField('Mông (cm)', _hipCtrl),
-            _buildTextField('Đùi (cm)', _thighCtrl),
-            _buildTextField('Bắp chân (cm)', _calfCtrl),
-            _buildTextField('Bắp tay (cm)', _armCtrl),
-            _buildTextField('Ngực (cm)', _chestCtrl),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: List.generate(4, (i) {
-                final img = _images[i];
-                return GestureDetector(
-                  onTap: () => _pickImage(i),
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    color: Colors.grey[200],
-                    child: img != null ? Image.file(img, fit: BoxFit.cover) : const Icon(Icons.add_a_photo, size: 20),
-                  ),
-                );
-              }),
-            ),
-            TextFormField(controller: _noteCtrl, decoration: const InputDecoration(labelText: 'Ghi chú')),
           ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-        ElevatedButton(onPressed: _addMeasurement, child: const Text('Lưu')),
-      ],
     );
   }
 }
 
-
-/// Screen so sánh 2 lần đo
+/// CompareMeasurementScreen giữ nguyên (giữ spacing chuẩn)
 class CompareMeasurementScreen extends StatelessWidget {
   final Measurement oldM;
   final Measurement newM;
@@ -355,7 +543,7 @@ class CompareMeasurementScreen extends StatelessWidget {
     final diff = _diffString(oldV, newV);
     final color = _diffColor(oldV, newV);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Expanded(flex: 3, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
@@ -369,116 +557,83 @@ class CompareMeasurementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final df = DateFormat('dd/MM/yyyy HH:mm');
+    final df = DateFormat('dd/MM/yyyy');
     return Scaffold(
       appBar: AppBar(title: const Text('So sánh số đo')),
       body: Padding(
         padding: const EdgeInsets.all(12.0),
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Cũ: ${df.format(oldM.createdAt)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text('Mới: ${df.format(newM.createdAt)}', style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              // header row
-              Row(
-                children: const [
-                  Expanded(flex: 3, child: Text('', style: TextStyle(fontWeight: FontWeight.w600))),
-                  Expanded(flex: 2, child: Text('Cũ', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
-                  Expanded(flex: 2, child: Text('Mới', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
-                  Expanded(flex: 2, child: Text('Δ', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
-                ],
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Cũ: ${df.format(oldM.createdAt)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Mới: ${df.format(newM.createdAt)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Card(
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(children: [
+                  Row(children: const [
+                    Expanded(flex: 3, child: Text('', style: TextStyle(fontWeight: FontWeight.w600))),
+                    Expanded(flex: 2, child: Text('Cũ', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
+                    Expanded(flex: 2, child: Text('Mới', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
+                    Expanded(flex: 2, child: Text('Δ', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w600))),
+                  ]),
+                  const Divider(),
+                  _row('Cân nặng (kg)', oldM.weight, newM.weight),
+                  _row('Chiều cao (cm)', oldM.height, newM.height),
+                  _row('Vai (cm)', oldM.shoulder, newM.shoulder),
+                  _row('Eo (cm)', oldM.waist, newM.waist),
+                  _row('Bụng rốn (cm)', oldM.belly, newM.belly),
+                  _row('Mông (cm)', oldM.hip, newM.hip),
+                  _row('Đùi (cm)', oldM.thigh, newM.thigh),
+                  _row('Bắp chân (cm)', oldM.calf, newM.calf),
+                  _row('Bắp tay (cm)', oldM.arm, newM.arm),
+                  _row('Ngực (cm)', oldM.chest, newM.chest),
+                ]),
               ),
-              const Divider(),
-              _row('Cân nặng (kg)', oldM.weight, newM.weight),
-              _row('Chiều cao (cm)', oldM.height, newM.height),
-              _row('Vai (cm)', oldM.shoulder, newM.shoulder),
-              _row('Eo (cm)', oldM.waist, newM.waist),
-              _row('Bụng rốn (cm)', oldM.belly, newM.belly),
-              _row('Mông (cm)', oldM.hip, newM.hip),
-              _row('Đùi (cm)', oldM.thigh, newM.thigh),
-              _row('Bắp chân (cm)', oldM.calf, newM.calf),
-              _row('Bắp tay (cm)', oldM.arm, newM.arm),
-              _row('Ngực (cm)', oldM.chest, newM.chest),
-              const SizedBox(height: 16),
-              // images compare (show up to 2 images from each)
-              if (oldM.localImages.isNotEmpty || newM.localImages.isNotEmpty)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Ảnh so sánh', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text('Cũ', style: TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-                              const SizedBox(height: 6),
-                              Column(
-                                children: oldM.localImages.map((p) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.file(
-                                        File(p),
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const Text('Mới', style: TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-                              const SizedBox(height: 6),
-                              Column(
-                                children: newM.localImages.map((p) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.file(
-                                        File(p),
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                  ],
-                ),
-              const SizedBox(height: 12),
-              if ((oldM.note ?? '').isNotEmpty || (newM.note ?? '').isNotEmpty)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Ghi chú', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+            const SizedBox(height: 16),
+            if (oldM.localImages.isNotEmpty || newM.localImages.isNotEmpty) ...[
+              const Text('Ảnh so sánh', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    const Text('Cũ', style: TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
                     const SizedBox(height: 6),
-                    Text('Cũ: ${oldM.note ?? '-'}'),
-                    const SizedBox(height: 4),
-                    Text('Mới: ${newM.note ?? '-'}'),
-                  ],
+                    Column(children: oldM.localImages.map((p) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(p), width: double.infinity, fit: BoxFit.cover)),
+                      );
+                    }).toList()),
+                  ]),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    const Text('Mới', style: TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+                    const SizedBox(height: 6),
+                    Column(children: newM.localImages.map((p) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(p), width: double.infinity, fit: BoxFit.cover)),
+                      );
+                    }).toList()),
+                  ]),
+                ),
+              ]),
             ],
-          ),
+            const SizedBox(height: 12),
+            if ((oldM.note ?? '').isNotEmpty || (newM.note ?? '').isNotEmpty) ...[
+              const Text('Ghi chú', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text('Cũ: ${oldM.note ?? '-'}'),
+              const SizedBox(height: 4),
+              Text('Mới: ${newM.note ?? '-'}'),
+            ],
+          ]),
         ),
       ),
     );

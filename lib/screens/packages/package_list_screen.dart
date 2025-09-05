@@ -6,6 +6,7 @@ import '../../models/training_package.dart';
 import '../../services/package_service.dart';
 import 'package_detail_screen.dart';
 import 'PackageHistoryScreen.dart';
+import '../../services/package_clipboard.dart';
 
 class PackageListScreen extends StatefulWidget {
   const PackageListScreen({super.key});
@@ -18,11 +19,23 @@ class _PackageListScreenState extends State<PackageListScreen> {
   final service = PackageService();
   final _searchController = TextEditingController();
   String _query = '';
+  bool _hasClipboard = false;
+
+
+  // --- Filter state ---
+  // 'all' | 'onlyActive' | 'expired'
+  String _statusFilter = 'onlyActive';
+  int? _minRemainingFilter; // nếu null => không lọc theo min
+  String _sortBy = 'name'; // 'name' | 'expire' | 'remaining'
+  // --------------------
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    // kiểm tra clipboard
+    _hasClipboard = PackageClipboard.hasCopied();
+
   }
 
   @override
@@ -37,25 +50,126 @@ class _PackageListScreenState extends State<PackageListScreen> {
     });
   }
 
-  Future<void> _openAddModal() async {
-    final saved = await showModalBottomSheet<bool>(
+Future<bool?> _openAddModal({TrainingPackage? initialPackage}) async {
+  final saved = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return FractionallySizedBox(
+        heightFactor: 0.95,
+        child: _PackageAddModal(initialPackage: initialPackage),
+      );
+    },
+  );
+
+  if (saved == true && mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã tạo gói tập')),
+    );
+  }
+  return saved;
+}
+
+  // --- Mở modal filter ---
+  Future<void> _openFilterModal() async {
+    final minText = _minRemainingFilter?.toString() ?? '';
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return FractionallySizedBox(
-          heightFactor: 0.95,
-          child: _PackageAddModal(),
+        String tmpStatus = _statusFilter;
+        String tmpSort = _sortBy;
+        final _minCtrl = TextEditingController(text: minText);
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4))),
+              const SizedBox(height: 12),
+              const Text('Bộ lọc', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+
+              // Trạng thái
+              DropdownButtonFormField<String>(
+                value: tmpStatus,
+                decoration: InputDecoration(labelText: 'Trạng thái', filled: true, fillColor: Colors.grey.shade100),
+                items: const [
+                  DropdownMenuItem(value: 'all', child: Text('Tất cả')),
+                  DropdownMenuItem(value: 'onlyActive', child: Text('Còn buổi')),
+                  DropdownMenuItem(value: 'expired', child: Text('Đã hết hạn')),
+                ],
+                onChanged: (v) => tmpStatus = v ?? 'all',
+              ),
+              const SizedBox(height: 8),
+
+              // Sắp xếp
+              DropdownButtonFormField<String>(
+                value: tmpSort,
+                decoration: InputDecoration(labelText: 'Sắp xếp theo', filled: true, fillColor: Colors.grey.shade100),
+                items: const [
+                  DropdownMenuItem(value: 'name', child: Text('Tên gói (A → Z)')),
+                  DropdownMenuItem(value: 'expire', child: Text('Ngày hết hạn (sớm → muộn)')),
+                  DropdownMenuItem(value: 'remaining', child: Text('Số buổi còn (ít → nhiều)')),
+                ],
+                onChanged: (v) => tmpSort = v ?? 'name',
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        // Reset filter
+                        Navigator.of(ctx).pop({
+                          'status': 'onlyActive',
+                          'minRemaining': null,
+                          'sortBy': 'name',
+                        });
+                      },
+                      child: const Text('Đặt lại'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        final minVal = int.tryParse(_minCtrl.text.trim());
+                        Navigator.of(ctx).pop({
+                          'status': tmpStatus,
+                          'minRemaining': minVal,
+                          'sortBy': tmpSort,
+                        });
+                      },
+                      child: const Text('Áp dụng'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
         );
       },
     );
 
-    if (saved == true && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã tạo gói tập')),
-      );
+    if (result != null && mounted) {
+      setState(() {
+        _statusFilter = result['status'] as String? ?? 'onlyActive';
+        _minRemainingFilter = result['minRemaining'] as int?;
+        _sortBy = result['sortBy'] as String? ?? 'name';
+      });
     }
   }
+  // ------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -85,32 +199,62 @@ class _PackageListScreenState extends State<PackageListScreen> {
           ],
         ),
         centerTitle: false,
-        actions: [
-          IconButton(
-            tooltip: 'Lịch sử gói',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const PackageHistoryScreen()),
-              );
-            },
-            icon: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              padding: const EdgeInsets.all(8),
-              child: const Icon(Icons.history, color: Colors.white, size: 20),
-            ),
+actions: [
+  IconButton(
+    tooltip: 'Lịch sử gói',
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PackageHistoryScreen()),
+      );
+    },
+    icon: Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        shape: BoxShape.circle,
+      ),
+      padding: const EdgeInsets.all(8),
+      child: const Icon(Icons.history, color: Colors.white, size: 20),
+    ),
+  ),
+  // --- NEW: paste icon ---
+  if (_hasClipboard)
+    Padding(
+      padding: const EdgeInsets.only(right: 6.0),
+      child: IconButton(
+        tooltip: 'Dán gói đã sao chép',
+        onPressed: () async {
+          final pkg = PackageClipboard.getCopied();
+          if (pkg == null) return;
+          // mở modal thêm gói với dữ liệu đã paste (không set expire)
+          final saved = await _openAddModal(initialPackage: pkg);
+          // nếu đã lưu thì xóa clipboard và cập nhật trạng thái
+          if (saved == true && mounted) {
+            PackageClipboard.clear();
+            setState(() {
+              _hasClipboard = false;
+            });
+          }
+        },
+        icon: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.12),
+            shape: BoxShape.circle,
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              child: const Icon(Icons.person, color: Colors.black87),
-            ),
-          )
-        ],
+          padding: const EdgeInsets.all(8),
+          child: const Icon(Icons.paste, color: Colors.white, size: 20),
+        ),
+      ),
+    ),
+  Padding(
+    padding: const EdgeInsets.only(right: 12.0),
+    child: CircleAvatar(
+      backgroundColor: Colors.white.withOpacity(0.9),
+      child: const Icon(Icons.person, color: Colors.black87),
+    ),
+  )
+],
+
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openAddModal,
@@ -170,10 +314,26 @@ class _PackageListScreenState extends State<PackageListScreen> {
                       ),
                       child: IconButton(
                         tooltip: 'Bộ lọc',
-                        onPressed: () {
-                          // placeholder: bạn có thể mở filter modal ở đây
-                        },
-                        icon: const Icon(Icons.filter_list, color: Colors.white),
+                        onPressed: _openFilterModal, // <-- gọi modal filter
+                        icon: Stack(
+                          clipBehavior: Clip.none, // để cho badge có thể vươn ra ngoài
+                          children: [
+                            const Icon(Icons.filter_list, color: Colors.white),
+                            if (!(_statusFilter == 'onlyActive' && _minRemainingFilter == null && _sortBy == 'name'))
+                              Positioned(
+                                right: -2,  // đẩy ra ngoài 1 chút thay vì 6
+                                top: -2,    // đẩy lên trên
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.redAccent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -237,15 +397,49 @@ class _PackageListScreenState extends State<PackageListScreen> {
                         if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
                         if (!snap.hasData) return const Center(child: CircularProgressIndicator());
 
+                        // apply filters here
+                        final now = DateTime.now();
                         final packages = snap.data!
-                            .where((p) => (p.remainingSessions ?? 0) > 0)
                             .where((p) {
-                              if (_query.isEmpty) return true;
-                              final names = p.clients.map((c) => c.name).join(' ').toLowerCase();
-                              return (p.packageName ?? '').toLowerCase().contains(_query) || names.contains(_query);
+                              // status filter
+                              final remain = p.remainingSessions ?? 0;
+                              final expire = p.expireDate;
+                              if (_statusFilter == 'onlyActive') {
+                                if (remain <= 0) return false;
+                              } else if (_statusFilter == 'expired') {
+                                // consider expired if remaining==0 OR expireDate before now
+                                if (!(remain == 0 || (expire != null && expire.isBefore(now)))) {
+                                  return false;
+                                }
+                              }
+                              // min remaining
+                              if (_minRemainingFilter != null) {
+                                if ((p.remainingSessions ?? 0) < _minRemainingFilter!) return false;
+                              }
+                              // text query (name of package or client names)
+                              if (_query.isNotEmpty) {
+                                final names = p.clients.map((c) => c.name).join(' ').toLowerCase();
+                                if (!((p.packageName ?? '').toLowerCase().contains(_query) || names.contains(_query))) {
+                                  return false;
+                                }
+                              }
+                              return true;
                             })
                             .toList();
-                        packages.sort((a, b) => (a.packageName ?? '').toLowerCase().compareTo((b.packageName ?? '').toLowerCase()));
+
+                        // sorting
+                        packages.sort((a, b) {
+                          if (_sortBy == 'name') {
+                            return (a.packageName ?? '').toLowerCase().compareTo((b.packageName ?? '').toLowerCase());
+                          } else if (_sortBy == 'expire') {
+                            final da = a.expireDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+                            final db = b.expireDate ?? DateTime.fromMillisecondsSinceEpoch(0);
+                            return da.compareTo(db);
+                          } else if (_sortBy == 'remaining') {
+                            return (a.remainingSessions ?? 0).compareTo(b.remainingSessions ?? 0);
+                          }
+                          return 0;
+                        });
 
                         if (packages.isEmpty) {
                           return const Center(child: Text('Chưa có gói tập'));
@@ -291,13 +485,16 @@ class _PackageListScreenState extends State<PackageListScreen> {
 
 /// Modal widget for adding package (full-screen modal)
 class _PackageAddModal extends StatefulWidget {
+  final TrainingPackage? initialPackage;
+  const _PackageAddModal({this.initialPackage, Key? key}) : super(key: key);
+
   @override
   State<_PackageAddModal> createState() => _PackageAddModalState();
 }
 
 class _PackageAddModalState extends State<_PackageAddModal> {
   final _addFormKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController(text: 'Ways');
+  final _nameCtrl = TextEditingController();
   int _pair = 1;
   int _total = 12;
   int _price = 0;
@@ -312,13 +509,26 @@ class _PackageAddModalState extends State<_PackageAddModal> {
   @override
   void initState() {
     super.initState();
-    _ensureClientFields();
-    _totalCtrl = TextEditingController(text: _total.toString());
-    _priceCtrl = TextEditingController(text: _price == 0 ? '' : _price.toString());
-    _expire = DateTime.now().add(Duration(days: _total * 3));
-  }
 
-  void _ensureClientFields() {
+    // dọn controllers cũ (tránh leak / duplicate)
+    _clientCtrls.clear();
+    _phoneCtrls.clear();
+
+    final ip = widget.initialPackage;
+    if (ip != null) {
+      _nameCtrl.text = ip.packageName ?? '';
+      _pair = (ip.clients.isNotEmpty) ? ip.clients.length : 1;
+      _total = ip.totalSessions ?? _total;
+      _price = ip.price ?? _price;
+
+      // tạo controllers từ clients (đảm bảo copy tên + phone)
+      for (var c in ip.clients) {
+        _clientCtrls.add(TextEditingController(text: c.name));
+        _phoneCtrls.add(TextEditingController(text: c.phone));
+      }
+    }
+
+    // đảm bảo có đủ controllers theo _pair
     while (_clientCtrls.length < _pair) {
       _clientCtrls.add(TextEditingController());
       _phoneCtrls.add(TextEditingController());
@@ -327,7 +537,12 @@ class _PackageAddModalState extends State<_PackageAddModal> {
       _clientCtrls.removeLast().dispose();
       _phoneCtrls.removeLast().dispose();
     }
-    if (mounted) setState(() {});
+
+    _totalCtrl = TextEditingController(text: _total.toString());
+    _priceCtrl = TextEditingController(text: _price == 0 ? '' : _price.toString());
+
+    // IMPORTANT: Không copy expireDate từ initialPackage (user yêu cầu)
+    _expire = DateTime.now().add(Duration(days: _total * 3));
   }
 
   @override
@@ -387,7 +602,7 @@ class _PackageAddModalState extends State<_PackageAddModal> {
       totalSessions: _total,
       remainingSessions: _total,
       price: _price,
-      expireDate: _expire,
+      expireDate: _expire, // dùng expire do người dùng chọn
       createdAt: Timestamp.now(),
     );
 
@@ -398,7 +613,6 @@ class _PackageAddModalState extends State<_PackageAddModal> {
       for (var c in clients) {
         final phone = c.phone.trim();
         final name = c.name.trim();
-
         if (phone.isEmpty && name.isEmpty) continue;
 
         if (phone.isNotEmpty) {
@@ -420,16 +634,11 @@ class _PackageAddModalState extends State<_PackageAddModal> {
       }
 
       if (!mounted) return;
-
       Navigator.of(context).pop(true);
-      Future.microtask(() {
-        Navigator.of(context).pushNamed('/students');
-      });
+      Future.microtask(() { Navigator.of(context).pushNamed('/students'); });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi khi tạo gói hoặc học viên: $e')),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi khi tạo gói hoặc học viên: $e')));
       }
     }
   }
@@ -454,19 +663,12 @@ class _PackageAddModalState extends State<_PackageAddModal> {
         child: Column(
           mainAxisSize: MainAxisSize.max,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4)),
-            ),
+            Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4))),
             Row(
               children: [
                 const Expanded(child: Text('Thêm gói tập', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  icon: const Icon(Icons.close),
-                ),
+                IconButton(onPressed: () => Navigator.of(context).pop(false), icon: const Icon(Icons.close)),
               ],
             ),
             const SizedBox(height: 8),
@@ -505,7 +707,15 @@ class _PackageAddModalState extends State<_PackageAddModal> {
                                 onChanged: (v) {
                                   setState(() {
                                     _pair = v ?? 1;
-                                    _ensureClientFields();
+                                    // adjust controllers length
+                                    while (_clientCtrls.length < _pair) {
+                                      _clientCtrls.add(TextEditingController());
+                                      _phoneCtrls.add(TextEditingController());
+                                    }
+                                    while (_clientCtrls.length > _pair) {
+                                      _clientCtrls.removeLast().dispose();
+                                      _phoneCtrls.removeLast().dispose();
+                                    }
                                   });
                                 },
                               ),
@@ -593,6 +803,7 @@ class _PackageAddModalState extends State<_PackageAddModal> {
     );
   }
 }
+
 
 // ---------- Reuse the Mini stat and package card ----------
 class _MiniStatCard extends StatelessWidget {

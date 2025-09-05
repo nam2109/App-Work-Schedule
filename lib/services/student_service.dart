@@ -101,6 +101,26 @@ Future<void> addMeasurement(
         .snapshots()
         .map((snap) => snap.docs.map((d) => Measurement.fromDoc(d)).toList());
   }
+  /// CẬP NHẬT measurement
+  /// Nếu [m.id] rỗng -> tạo mới, ngược lại ghi đè/merge dữ liệu vào document tương ứng.
+  Future<void> updateMeasurement(String studentId, Measurement m) async {
+    if (m.id.isEmpty) {
+      // nếu chưa có id -> tạo mới
+      await addFullMeasurement(studentId, m);
+      return;
+    }
+
+    final docRef = measurementsRef(studentId).doc(m.id);
+    final data = Map<String, dynamic>.from(m.toJson());
+
+    // Nếu createdAt là DateTime, chuyển thành Timestamp để Firestore lưu đúng
+    final createdAt = data['createdAt'];
+    if (createdAt is DateTime) {
+      data['createdAt'] = Timestamp.fromDate(createdAt);
+    }
+
+    await docRef.set(data, SetOptions(merge: true));
+  }
 
   Future<void> upsertStudentByNameAndPhone(String name, String phone) async {
     final query = await _studentsCol.where('name', isEqualTo: name).get();

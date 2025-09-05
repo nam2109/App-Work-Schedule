@@ -1,4 +1,5 @@
 // lib/screens/students/student_list_screen.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/student_service.dart';
 import '../../models/student.dart';
@@ -17,10 +18,32 @@ class _StudentListScreenState extends State<StudentListScreen> {
   final _fs = StudentService();
   final TextEditingController _searchCtrl = TextEditingController();
 
+  late final Stream<List<Student>> _studentsStream;
+  String _query = '';
+  Timer? _debounce;
+
   @override
   void initState() {
     super.initState();
+    // KHỞI TẠO STREAM 1 LẦN -> tránh re-subscribe mỗi lần build
+    _studentsStream = _fs.streamStudents();
     _createInitialStudentsIfNeeded();
+
+    // Lắng nghe search với debounce để giảm số lần rebuild khi gõ nhanh
+    _searchCtrl.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    // Debounce 300ms
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      final q = _searchCtrl.text.trim().toLowerCase();
+      if (q != _query) {
+        setState(() {
+          _query = q;
+        });
+      }
+    });
   }
 
   Future<void> _createInitialStudentsIfNeeded() async {
@@ -99,6 +122,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _searchCtrl.removeListener(_onSearchChanged);
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -110,7 +135,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      // AppBar đồng bộ với các màn khác (icon + title, trong suốt, bỏ back)
       appBar: AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
@@ -141,7 +165,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
         ],
       ),
 
-      // FloatingActionButton: gradient circular để đồng bộ style
       floatingActionButton: GestureDetector(
         onTap: _showAddStudentDialog,
         child: Container(
@@ -166,29 +189,26 @@ class _StudentListScreenState extends State<StudentListScreen> {
             colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
           ),
         ),
-        // push content below AppBar
         child: SafeArea(
           child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: StreamBuilder<List<Student>>(
-              stream: _fs.streamStudents(),
+              stream: _studentsStream, // <-- Dùng stream đã cache
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
                 final students = snapshot.data ?? [];
-                final filtered = _applySearchFilter(students, _searchCtrl.text);
+                final filtered = _applySearchFilter(students, _query);
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // subtitle / small description
                     Text('Danh sách khách hàng của bạn', style: TextStyle(color: Colors.white70)),
-
                     const SizedBox(height: 12),
 
-                    // Search bar
+                    // Search bar (dùng controller + debounce)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
@@ -203,22 +223,20 @@ class _StudentListScreenState extends State<StudentListScreen> {
                             child: TextField(
                               controller: _searchCtrl,
                               style: const TextStyle(color: Colors.white),
-                              onChanged: (_) {
-                                setState(() {}); // chỉ rebuild khi text thay đổi
-                              },
                               decoration: const InputDecoration(
                                 hintText: 'Tìm: tên hoặc số điện thoại',
                                 hintStyle: TextStyle(color: Colors.white70),
                                 border: InputBorder.none,
                                 isDense: true,
                               ),
+                              textInputAction: TextInputAction.search,
                             ),
                           ),
                           if (_searchCtrl.text.isNotEmpty)
                             GestureDetector(
                               onTap: () {
                                 _searchCtrl.clear();
-                                setState(() {});
+                                // listener + debounce sẽ cập nhật _query
                               },
                               child: const Icon(Icons.clear, color: Colors.white70),
                             ),
@@ -228,7 +246,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
                     const SizedBox(height: 16),
 
-                    // White container holding list/grid
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(12),
@@ -326,42 +343,6 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
             ),
             const Icon(Icons.chevron_right, color: Colors.black38),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Reusable mini stat card (style aligned with other screens)
-class _MiniStatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  const _MiniStatCard({Key? key, required this.title, required this.value}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 6),
-            Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
