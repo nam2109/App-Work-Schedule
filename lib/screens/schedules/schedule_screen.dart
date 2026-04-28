@@ -21,16 +21,16 @@ class ScheduleScreen extends ConsumerWidget {
     Color getRandomColor() {
       final usedValues = tables.map((e) => e.color.value).toSet();
       final availableColors = const [
-        Colors.red,
-        Colors.blue,
-        Colors.green,
-        Colors.orange,
-        Colors.purple,
-        Colors.pink,
-        Colors.yellow,
-        Colors.cyan,
-        Colors.brown,
-        Colors.indigo,
+        Color(0xFF4A43EC), // Primary Purple/Blue
+        Color(0xFFFF9F1C), // Orange
+        Color(0xFF2EC4B6), // Teal
+        Color(0xFFE71D36), // Red
+        Color(0xFF9C27B0), // Purple
+        Color(0xFF00BCD4), // Cyan
+        Color(0xFF8BC34A), // Light Green
+        Color(0xFFFFC107), // Amber
+        Color(0xFF3F51B5), // Indigo
+        Color(0xFFE91E63), // Pink
       ];
 
       final unusedColors = availableColors.where((c) => !usedValues.contains(c.value)).toList();
@@ -41,9 +41,9 @@ class ScheduleScreen extends ConsumerWidget {
 
       return Color.fromARGB(
         255,
-        Random().nextInt(256),
-        Random().nextInt(256),
-        Random().nextInt(256),
+        Random().nextInt(200),
+        Random().nextInt(200),
+        Random().nextInt(200),
       );
     }
 
@@ -55,16 +55,16 @@ class ScheduleScreen extends ConsumerWidget {
         isScrollControlled: true,
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         builder: (_) {
           return AnimatedPadding(
             duration: const Duration(milliseconds: 300),
             padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              left: 20,
+              right: 20,
+              top: 24,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -79,44 +79,61 @@ class ScheduleScreen extends ConsumerWidget {
                         style: GoogleFonts.montserrat(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: const Color(0xFF2D3142),
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.close_rounded, color: Colors.black54),
+                          onPressed: () => Navigator.pop(context),
+                        ),
                       )
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Row(
                     children: [
-                      CircleAvatar(
-                        backgroundColor: previewColor,
-                        radius: 20,
-                        child: const Icon(Icons.table_rows, color: Colors.white),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: previewColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.table_rows_rounded, color: previewColor, size: 24),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       Text(
-                        'Màu của bảng',
-                        style: GoogleFonts.roboto(fontSize: 16),
+                        'Màu của bảng sẽ được chọn ngẫu nhiên',
+                        style: GoogleFonts.roboto(fontSize: 14, color: Colors.grey.shade600),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   TextField(
                     controller: nameController,
+                    style: const TextStyle(fontSize: 16, color: Color(0xFF2D3142)),
                     decoration: InputDecoration(
-                      hintText: 'Nhập tên bảng...',
+                      hintText: 'Nhập tên bảng (VD: Tháng 1)...',
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      filled: true,
+                      fillColor: const Color(0xFFF5F7FA),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
                       ),
-                      prefixIcon: const Icon(Icons.edit_note),
+                      prefixIcon: const Icon(Icons.edit_note_rounded, color: Colors.grey),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 18),
                     ),
                     autofocus: true,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
+                    height: 54,
                     child: ElevatedButton.icon(
                       onPressed: () {
                         final name = nameController.text.trim();
@@ -132,16 +149,16 @@ class ScheduleScreen extends ConsumerWidget {
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: const Color(0xFF4A43EC),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      icon: const Icon(Icons.check),
+                      icon: const Icon(Icons.check_rounded, color: Colors.white),
                       label: const Text(
                         'Tạo bảng',
-                        style: TextStyle(fontSize: 16), 
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                   )
@@ -158,16 +175,34 @@ class ScheduleScreen extends ConsumerWidget {
       final newName = await showDialog<String>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Chỉnh sửa tên bảng'),
-          content: TextField(controller: controller),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Chỉnh sửa tên bảng',
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF2D3142)),
+          ),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF5F7FA),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            ),
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+            TextButton(
+              onPressed: () => Navigator.pop(context), 
+              child: const Text('Hủy', style: TextStyle(color: Colors.grey))
+            ),
             ElevatedButton(
               onPressed: () {
                 final txt = controller.text.trim();
                 if (txt.isNotEmpty) Navigator.pop(context, txt);
               },
-              child: const Text('Lưu'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4A43EC),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Lưu', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -181,14 +216,24 @@ class ScheduleScreen extends ConsumerWidget {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Xác nhận xóa'),
-          content: const Text('Bạn có chắc muốn xóa bảng này không?'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(
+            'Xác nhận xóa',
+            style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF2D3142)),
+          ),
+          content: const Text('Bạn có chắc muốn xóa bảng này không? Dữ liệu bên trong sẽ bị mất.'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false), 
+              child: const Text('Hủy', style: TextStyle(color: Colors.grey))
+            ),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              child: const Text('Xóa'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE71D36),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Xóa', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -201,47 +246,63 @@ class ScheduleScreen extends ConsumerWidget {
     void _showTableOptions(BuildContext context, ScheduleTable table, int index) {
       showModalBottomSheet(
         context: context,
+        backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         builder: (_) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 12.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              ListTile(
-                leading: const Icon(Icons.edit, color: Colors.blue),
-                title: const Text('Sửa tên'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _editTableName(context, index, table.name);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.copy, color: Colors.green),
-                title: const Text('Sao chép'),
-                onTap: () {
-                  Navigator.pop(context);
-                  notifier.duplicateTable(index);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Xóa', style: TextStyle(color: Colors.red)),
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmDelete(context, index);
-                },
-              ),
-            ],
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.edit_rounded, color: Colors.blue),
+                  ),
+                  title: const Text('Sửa tên bảng', style: TextStyle(fontWeight: FontWeight.w500)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _editTableName(context, index, table.name);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.copy_rounded, color: Colors.green),
+                  ),
+                  title: const Text('Sao chép bảng', style: TextStyle(fontWeight: FontWeight.w500)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    notifier.duplicateTable(index);
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                    child: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                  ),
+                  title: const Text('Xóa bảng', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmDelete(context, index);
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -258,84 +319,128 @@ class ScheduleScreen extends ConsumerWidget {
         return false;
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF6F6F6),
+        backgroundColor: const Color(0xFFF5F7FA), // Màu nền sáng, sạch sẽ
         appBar: PreferredSize(
-          preferredSize: const Size.fromHeight(140),
+          preferredSize: const Size.fromHeight(110), 
           child: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
             automaticallyImplyLeading: false,
             flexibleSpace: Container(
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.deepPurple.shade700, Colors.deepPurple.shade400],
+                  colors: [Color(0xFF4A43EC), Color(0xFF2B25A3)], 
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)), 
               ),
-              padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 12, left: 16, right: 16, bottom: 12),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 12, 
+                left: 20, 
+                right: 20, 
+                bottom: 16
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Row(
                     children: [
-                      // nicer back button
+                      // Back button
                       Material(
-                        color: Colors.white.withOpacity(0.12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        color: Colors.white.withOpacity(0.15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         child: InkWell(
                           onTap: _finishAndReturn,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                           child: Container(
                             padding: const EdgeInsets.all(8),
-                            child: const Icon(Icons.arrow_back, color: Colors.white),
+                            child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               category.name,
-                              style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.w600, color: Colors.white),
+                              style: GoogleFonts.montserrat(
+                                fontSize: 22, 
+                                fontWeight: FontWeight.bold, 
+                                color: Colors.white
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              tables.isEmpty ? 'Chưa có bảng nào' : '${tables.length} bảng',
-                              style: GoogleFonts.roboto(color: Colors.white70, fontSize: 13),
+                              tables.isEmpty ? 'Chưa có dữ liệu' : '${tables.length} bảng lịch tập',
+                              style: const TextStyle(color: Colors.white70, fontSize: 13),
                             ),
                           ],
                         ),
                       ),
 
-                      // sync / loading indicator
                       if (loading)
                         const SizedBox(
                           width: 36,
                           height: 36,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        ),
-
-                      if (!loading)
+                          child: Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          ),
+                        )
+                      else
                         IconButton(
-                          icon: const Icon(Icons.sync, color: Colors.white),
+                          icon: const Icon(Icons.sync_rounded, color: Colors.white),
                           onPressed: () async {
                             ref.read(syncLoadingProvider.notifier).state = true;
                             final message = await notifier.syncWithFirebase();
                             ref.read(syncLoadingProvider.notifier).state = false;
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+                            
+                            // Giao diện thông báo Đồng bộ mới
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF2EC4B6), // Màu xanh ngọc (Success)
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        message,
+                                        style: const TextStyle(
+                                          color: Colors.white, 
+                                          fontSize: 14, 
+                                          fontWeight: FontWeight.w500
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: const Color(0xFF2D3142), // Nền xám đen hiện đại
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 8,
+                                margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20),
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
                           },
                           tooltip: 'Đồng bộ',
                         ),
 
                       IconButton(
-                        icon: const Icon(Icons.table_chart, color: Colors.white),
+                        icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
                         onPressed: () {
                           Navigator.push(
                             context,
@@ -344,44 +449,6 @@ class ScheduleScreen extends ConsumerWidget {
                         },
                         tooltip: 'Tóm tắt',
                       ),
-
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Search box inside AppBar
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 6, offset: const Offset(0, 2)),
-                            ],
-                          ),
-                          child: TextField(
-                            onChanged: (q) {
-                              // optional: implement search/filter in provider
-                            },
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.search),
-                              hintText: 'Tìm bảng hoặc ghi chú...',
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      FloatingActionButton(
-                        mini: true,
-                        backgroundColor: Colors.white,
-                        heroTag: 'add_table_fab',
-                        onPressed: _showAddTableDialog,
-                        child: const Icon(Icons.add, color: Colors.deepPurple),
-                      ),
                     ],
                   ),
                 ],
@@ -389,81 +456,100 @@ class ScheduleScreen extends ConsumerWidget {
             ),
           ),
         ),
+        
         body: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(top: 16, left: 20, right: 20),
           child: tables.isEmpty
               ? Center(
-                  child: Text(
-                    
-                    'Chưa có bảng nào.\nNhấn nút + để tạo mới',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.roboto(fontSize: 16, color: Colors.grey[600]),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inbox_rounded, size: 64, color: Colors.grey.shade300),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Thư mục này đang trống.\nNhấn nút + để tạo bảng lịch tập đầu tiên.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 15, color: Colors.grey.shade500, height: 1.5),
+                      ),
+                    ],
                   ),
                 )
               : ListView.separated(
+                  padding: const EdgeInsets.only(bottom: 90), 
                   itemCount: tables.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  separatorBuilder: (_, __) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
                     final table = tables[index];
                     return GestureDetector(
                       onLongPress: () => _showTableOptions(context, table, index),
-                      child: Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 4,
-                        shadowColor: Colors.deepPurple.withOpacity(0.15),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ScheduleDetailScreen(
-                                  table: table,
-                                  allTables: tables,
-                                  category: category,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20), 
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04), 
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            )
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ScheduleDetailScreen(
+                                    table: table,
+                                    allTables: tables,
+                                    category: category,
+                                  ),
                                 ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 52,
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: table.color.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Icon(Icons.table_rows_rounded, color: table.color, size: 26),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          table.name,
+                                          style: GoogleFonts.montserrat(
+                                            fontSize: 16, 
+                                            fontWeight: FontWeight.bold, 
+                                            color: const Color(0xFF2D3142)
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Nhấn để xem chi tiết', 
+                                          style: TextStyle(color: Colors.grey.shade500, fontSize: 13)
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade400),
+                                    onPressed: () => _showTableOptions(context, table, index),
+                                  ),
+                                ],
                               ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: table.color,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.12),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(Icons.table_rows, color: Colors.white),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        table.name,
-                                        style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text('Nhấn để xem chi tiết', style: TextStyle(color: Colors.grey[600])),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.more_vert, color: Colors.grey),
-                                  onPressed: () => _showTableOptions(context, table, index),
-                                ),
-                              ],
                             ),
                           ),
                         ),
@@ -471,6 +557,14 @@ class ScheduleScreen extends ConsumerWidget {
                     );
                   },
                 ),
+        ),
+
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showAddTableDialog,
+          backgroundColor: const Color(0xFF4A43EC),
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
         ),
       ),
     );

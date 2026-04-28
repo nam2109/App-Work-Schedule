@@ -13,111 +13,109 @@ class CategoryScreen extends ConsumerWidget {
     final notifier = ref.read(categoryProvider.notifier);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Row(
-          children: const [
-            Icon(Icons.folder, color: Colors.white, size: 24),
-            SizedBox(width: 8),
-            Text(
-              'Danh mục',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+      backgroundColor: const Color(0xFFF5F7FA), // Nền xám xanh nhạt đồng bộ
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(130),
+        child: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF4A43EC), Color(0xFF2B25A3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
             ),
-          ],
-        ),
-        centerTitle: false,
-        actions: [
-
-          Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: CircleAvatar(
-              backgroundColor: Colors.white.withOpacity(0.9),
-              child: const Icon(Icons.person, color: Colors.black87),
+            padding: EdgeInsets.only(
+              top: MediaQuery.of(context).padding.top + 12,
+              left: 20,
+              right: 20,
+              bottom: 16,
             ),
-          ),
-        ],
-      ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Header with subtitle
-                const SizedBox(height: 6),
-                Text('Tổ chức lịch & điểm danh', style: GoogleFonts.roboto(color: Colors.white70, fontSize: 14)),
-
-                const SizedBox(height: 16),
-
-                // White rounded container with list
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 6)),
-                      ],
+                Row(
+                  children: [
+                    // Nút Back đồng bộ
+                    Material(
+                      color: Colors.white.withOpacity(0.15),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: InkWell(
+                        onTap: () => Navigator.pop(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
                     ),
-                    child: categories.isEmpty
-                        ? _EmptyState(onCreate: (name) => notifier.addCategory(name))
-                        : ListView.separated(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            itemCount: categories.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 10),
-                            itemBuilder: (context, index) {
-                              final cat = categories[index];
-                              return _CategoryCard(
-                                category: cat,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => ScheduleScreen(category: cat)),
-                                  );
-                                },
-                                onOptions: () => _showCategoryOptions(context, index, notifier, cat.name),
-                              );
-                            },
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Danh mục lịch',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                  ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tổ chức lịch tập & điểm danh',
+                            style: GoogleFonts.roboto(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Avatar góc phải
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.white.withOpacity(0.9),
+                      child: const Icon(Icons.person_rounded, color: Color(0xFF4A43EC)),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
       ),
-
-      // Floating action button (gradient circle)
-      floatingActionButton: GestureDetector(
-        onTap: () => _openCreateModal(context, notifier),
-        child: Container(
-          height: 56,
-          width: 56,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF00C6FF), Color(0xFF0072FF)]),
-            shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 6))],
-          ),
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
+      body: Padding(
+        padding: const EdgeInsets.only(top: 16, left: 20, right: 20),
+        child: categories.isEmpty
+            ? _EmptyState(onCreate: (name) => notifier.addCategory(name))
+            : ListView.separated(
+                padding: const EdgeInsets.only(bottom: 80), // Chừa chỗ cho FAB
+                itemCount: categories.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 14),
+                itemBuilder: (context, index) {
+                  final cat = categories[index];
+                  return _CategoryCard(
+                    category: cat,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ScheduleScreen(category: cat)),
+                      );
+                    },
+                    onOptions: () => _showCategoryOptions(context, index, notifier, cat.name),
+                  );
+                },
+              ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _openCreateModal(context, notifier),
+        backgroundColor: const Color(0xFF4A43EC),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
       ),
     );
   }
@@ -127,21 +125,52 @@ class CategoryScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (_) => Padding(
-        padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Tạo danh mục mới', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          TextField(controller: nameCtrl, decoration: const InputDecoration(hintText: 'Nhập tên danh mục...', border: OutlineInputBorder()), autofocus: true),
-          const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 24,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Tạo danh mục mới', style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D3142))),
+                Container(
+                  decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
+                  child: IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.black54),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                )
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton(
+            const SizedBox(height: 20),
+            TextField(
+              controller: nameCtrl,
+              style: const TextStyle(fontSize: 16, color: Color(0xFF2D3142)),
+              decoration: InputDecoration(
+                hintText: 'Nhập tên danh mục (VD: Lịch PT)...',
+                hintStyle: TextStyle(color: Colors.grey.shade400),
+                filled: true,
+                fillColor: const Color(0xFFF5F7FA),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                prefixIcon: const Icon(Icons.folder_open_rounded, color: Colors.grey),
+                contentPadding: const EdgeInsets.symmetric(vertical: 18),
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
                 onPressed: () {
                   final name = nameCtrl.text.trim();
                   if (name.isNotEmpty) {
@@ -149,11 +178,17 @@ class CategoryScreen extends ConsumerWidget {
                     Navigator.pop(context);
                   }
                 },
-                child: const Text('Tạo'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A43EC),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                icon: const Icon(Icons.check_rounded, color: Colors.white),
+                label: const Text('Tạo danh mục', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
-          ])
-        ]),
+          ],
+        ),
       ),
     );
   }
@@ -162,21 +197,105 @@ class CategoryScreen extends ConsumerWidget {
     final controller = TextEditingController(text: oldName);
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 8), decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-          ListTile(leading: const Icon(Icons.edit, color: Colors.blue), title: const Text('Sửa tên'), onTap: () {
-            Navigator.pop(context);
-            showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Đổi tên danh mục'), content: TextField(controller: controller, decoration: const InputDecoration(hintText: 'Nhập tên mới...')), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')), ElevatedButton(onPressed: () { final txt = controller.text.trim(); if (txt.isNotEmpty) { notifier.editCategory(index, txt); Navigator.pop(context); } }, child: const Text('Lưu'))]));
-          }),
-          ListTile(leading: const Icon(Icons.copy, color: Colors.green), title: const Text('Sao chép'), onTap: () { Navigator.pop(context); notifier.duplicateCategory(index); }),
-          ListTile(leading: const Icon(Icons.delete, color: Colors.red), title: const Text('Xóa', style: TextStyle(color: Colors.red)), onTap: () {
-            Navigator.pop(context);
-            showDialog(context: context, builder: (_) => AlertDialog(title: const Text('Xác nhận xóa'), content: const Text('Bạn có chắc chắn muốn xóa danh mục này?'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')), ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () { notifier.deleteCategory(index); Navigator.pop(context); }, child: const Text('Xóa'))]));
-          }),
-          const SizedBox(height: 8)
-        ]),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.edit_rounded, color: Colors.blue),
+                ),
+                title: const Text('Đổi tên danh mục', style: TextStyle(fontWeight: FontWeight.w500)),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: Text('Đổi tên danh mục', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF2D3142))),
+                      content: TextField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFF5F7FA),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy', style: TextStyle(color: Colors.grey))),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4A43EC), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                          onPressed: () {
+                            final txt = controller.text.trim();
+                            if (txt.isNotEmpty) {
+                              notifier.editCategory(index, txt);
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: const Text('Lưu', style: TextStyle(color: Colors.white)),
+                        )
+                      ],
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.copy_rounded, color: Colors.green),
+                ),
+                title: const Text('Sao chép', style: TextStyle(fontWeight: FontWeight.w500)),
+                onTap: () {
+                  Navigator.pop(context);
+                  notifier.duplicateCategory(index);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                ),
+                title: const Text('Xóa danh mục', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                onTap: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      title: Text('Xác nhận xóa', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF2D3142))),
+                      content: const Text('Bạn có chắc chắn muốn xóa danh mục này? Mọi dữ liệu bên trong sẽ bị mất.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy', style: TextStyle(color: Colors.grey))),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE71D36), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                          onPressed: () {
+                            notifier.deleteCategory(index);
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+                        )
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -193,35 +312,75 @@ class _CategoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = _pickColor(category.name);
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          child: Row(children: [
-            CircleAvatar(radius: 26, backgroundColor: color.withOpacity(0.12), child: Icon(Icons.folder, color: color)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(category.name, style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Text('${category.tables.length} bảng thời khóa biểu', style: GoogleFonts.roboto(color: Colors.black54, fontSize: 13)),
-              ]),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04), // Soft shadow
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.folder_rounded, color: color, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        category.name,
+                        style: GoogleFonts.montserrat(fontSize: 16, fontWeight: FontWeight.bold, color: const Color(0xFF2D3142)),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${category.tables.length} bảng thời khóa biểu',
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: onOptions,
+                  icon: Icon(Icons.more_vert_rounded, color: Colors.grey.shade400),
+                )
+              ],
             ),
-            IconButton(onPressed: onOptions, icon: const Icon(Icons.more_vert))
-          ]),
+          ),
         ),
       ),
     );
   }
 
   Color _pickColor(String s) {
-    // simple deterministic color pick from string
+    // Tinh chỉnh bảng màu sáng, hiện đại hơn
     final code = s.codeUnits.fold<int>(0, (p, e) => p + e);
-    const palette = [Color(0xFF0072FF), Color(0xFF00C6FF), Color(0xFFFF7043), Color(0xFF7F00FF), Color(0xFF96C93D)];
+    const palette = [
+      Color(0xFF4A43EC), // Primary Purple
+      Color(0xFF00C6FF), // Light Blue
+      Color(0xFFFF9F1C), // Orange
+      Color(0xFF2EC4B6), // Teal
+      Color(0xFFE71D36), // Red
+    ];
     return palette[code % palette.length];
   }
 }
@@ -232,26 +391,95 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = TextEditingController();
     return Center(
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.folder_open, size: 72, color: Colors.grey[400]),
-        const SizedBox(height: 12),
-        Text('Chưa có danh mục', style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Text('Tạo danh mục để bắt đầu sắp xếp lịch tập và điểm danh', textAlign: TextAlign.center, style: GoogleFonts.roboto(color: Colors.black54)),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: 220,
-          child: ElevatedButton(
-            onPressed: () {
-              showModalBottomSheet(context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))), builder: (_) => Padding(padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: MediaQuery.of(context).viewInsets.bottom + 16), child: Column(mainAxisSize: MainAxisSize.min, children: [Text('Tạo danh mục mới', style: GoogleFonts.montserrat(fontSize: 18)), const SizedBox(height: 12), TextField(controller: controller, decoration: const InputDecoration(hintText: 'Nhập tên danh mục...', border: OutlineInputBorder()), autofocus: true), const SizedBox(height: 12), ElevatedButton(onPressed: () { final name = controller.text.trim(); if (name.isNotEmpty) { onCreate(name); Navigator.pop(context); } }, child: const Text('Tạo'))])));
-            },
-            child: const Text('Tạo danh mục'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.snippet_folder_rounded, size: 80, color: Colors.grey.shade300),
+          const SizedBox(height: 16),
+          Text(
+            'Chưa có danh mục nào',
+            style: GoogleFonts.montserrat(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF2D3142)),
           ),
-        )
-      ]),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Text(
+              'Tạo danh mục để bắt đầu phân loại lịch tập và khách hàng của bạn.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade500, height: 1.5),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              // Trigger hàm mở BottomSheet (có thể viết lại ở đây hoặc gọi hàm từ Widget cha, 
+              // nhưng do cách gọi cũ truyền controller xuống, ta làm gọn lại):
+              final controller = TextEditingController();
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+                builder: (_) => Padding(
+                  padding: EdgeInsets.only(left: 20, right: 20, top: 24, bottom: MediaQuery.of(context).viewInsets.bottom + 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Tạo danh mục', style: GoogleFonts.montserrat(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF2D3142))),
+                          IconButton(icon: const Icon(Icons.close_rounded, color: Colors.grey), onPressed: () => Navigator.pop(context)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: controller,
+                        decoration: InputDecoration(
+                          hintText: 'Nhập tên danh mục...',
+                          filled: true,
+                          fillColor: const Color(0xFFF5F7FA),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
+                        ),
+                        autofocus: true,
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            final name = controller.text.trim();
+                            if (name.isNotEmpty) {
+                              onCreate(name);
+                              Navigator.pop(context);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4A43EC),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                          child: const Text('Tạo mới', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text('Tạo danh mục', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4A43EC),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+          )
+        ],
+      ),
     );
   }
 }
-
